@@ -1,0 +1,13 @@
+name: "ipam-in-cluster"
+config:
+  image: "gcr.io/cluster-api-ipam-provider-in-cluster/release/manager"
+  live_reload_deps:
+  - main.go
+  - go.mod
+  - go.sum
+  - api
+  - controllers
+  - internal
+  - pkg
+  label: "IPAM_InCluster"
+  manager-name: "caip-in-cluster-controller-manager"

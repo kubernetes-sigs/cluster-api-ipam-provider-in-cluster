@@ -1,0 +1,7 @@
+apiVersion: ipam.cluster.x-k8s.io/v1alpha1
+kind: InClusterIPPool
+metadata:
+  name: inclusterippool-sample
+spec:
+  subnet: 10.0.0.0/24
+  gateway: 10.0.0.1

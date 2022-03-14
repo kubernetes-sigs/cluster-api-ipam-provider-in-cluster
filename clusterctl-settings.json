@@ -1,0 +1,7 @@
+{
+    "name": "ipam-in-cluster",
+    "config": {
+      "componentsFile": "ipam-components.yaml",
+      "nextVersion": "v0.1.0"
+    }
+  }

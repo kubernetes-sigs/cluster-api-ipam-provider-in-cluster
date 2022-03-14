@@ -1,0 +1,109 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: ipaddresses.cluster.x-k8s.io
+spec:
+  group: cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: IPAddress
+    listKind: IPAddressList
+    plural: ipaddresses
+    singular: ipaddress
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Pool the address is from
+      jsonPath: .spec.pool.name
+      name: Pool Name
+      type: string
+    - description: Pool the address is from
+      jsonPath: .spec.pool.kind
+      name: Pool Kind
+      type: string
+    - description: Address
+      jsonPath: .spec.address
+      name: Address
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: IPAddress is the Schema for the ipaddress API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              address:
+                description: Address is the IP address.
+                type: string
+              claim:
+                description: Claim is a reference to the claim this IPAddress was
+                  created for.
+                properties:
+                  group:
+                    description: API group of the referent.
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+              gateway:
+                description: Gateway is the network gateway of network the address
+                  is from.
+                type: string
+              pool:
+                description: Pool is a reference to the pool that this IPAddress was
+                  created from.
+                properties:
+                  group:
+                    description: API group of the referent.
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+              prefix:
+                description: Prefix is the prefix of the address.
+                type: integer
+            required:
+            - address
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
