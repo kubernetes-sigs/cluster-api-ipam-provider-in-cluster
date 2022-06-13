@@ -47,9 +47,6 @@ func (r *InClusterIPPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *InClusterIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-
-	// TODO(user): your logic here
-
 	return ctrl.Result{}, nil
 }
 
@@ -59,13 +56,13 @@ func (r *InClusterIPPoolReconciler) IPAddressClaimToPool(obj client.Object) []ct
 		return nil
 	}
 
-	if claim.Spec.Pool.Kind != "InClusterIPPool" {
+	if claim.Spec.PoolRef.Kind != "InClusterIPPool" {
 		return nil
 	}
 
 	return []ctrl.Request{
 		{
-			NamespacedName: types.NamespacedName{Name: claim.Spec.Pool.Name, Namespace: claim.Namespace},
+			NamespacedName: types.NamespacedName{Name: claim.Spec.PoolRef.Name, Namespace: claim.Namespace},
 		},
 	}
 }

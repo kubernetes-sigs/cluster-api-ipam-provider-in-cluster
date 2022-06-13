@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"inet.af/netaddr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterv1exp "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
@@ -37,9 +37,13 @@ type IPAddressClaimReconciler struct {
 func (r *IPAddressClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&clusterv1exp.IPAddressClaim{}).
-		WithEventFilter(predicates.ClaimReferencesPoolKind(v1.GroupKind{
+		WithOptions(controller.Options{
+			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
+			MaxConcurrentReconciles: 1,
+		}).
+		WithEventFilter(predicates.ClaimReferencesPoolKind(metav1.GroupKind{
 			Group: v1alpha1.GroupVersion.Group,
-			Kind:  reflect.TypeOf(v1alpha1.InClusterIPPool{}).Name(),
+			Kind:  "InClusterIPPool",
 		})).
 		Complete(r)
 }
@@ -62,12 +66,8 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	claim := &clusterv1exp.IPAddressClaim{}
 	if err := r.Client.Get(ctx, req.NamespacedName, claim); err != nil {
 		if apierrors.IsNotFound(err) {
-			// Object not found, return.  Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
 			return ctrl.Result{}, nil
 		}
-
-		// Error reading the object - requeue
 		return ctrl.Result{}, err
 	}
 
@@ -83,9 +83,8 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}()
 
 	pool := &v1alpha1.InClusterIPPool{}
-	if err := r.Client.Get(ctx, claim.Spec.Pool.NamespacedName(claim.Namespace), pool); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, pool); err != nil {
 		if !apierrors.IsNotFound(err) {
-			// Error reading pool - requeue
 			return ctrl.Result{}, err
 		}
 	}
@@ -98,7 +97,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.reconcileDelete(ctx, claim, pool)
 	}
 
-	addresses, err := poolutil.ListAddresses(ctx, claim.Spec.Pool.Name, r.Client)
+	addresses, err := poolutil.ListAddresses(ctx, claim.Spec.PoolRef.Name, r.Client)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
 	}
@@ -125,7 +124,7 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *clusterv1ex
 		}
 	}
 
-	c.Status.Address = *clusterv1.NewPinnedLocalObjectReference(address)
+	c.Status.AddressRef = corev1.LocalObjectReference{Name: address.Name}
 
 	return ctrl.Result{}, nil
 }

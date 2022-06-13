@@ -7,9 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 )
@@ -25,7 +25,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 			BeforeEach(func() {
 				pool := v1alpha1.InClusterIPPool{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: "default",
 					},
@@ -42,7 +42,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 			AfterEach(func() {
 				pool := v1alpha1.InClusterIPPool{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: "default",
 					},
@@ -53,20 +53,24 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 			It("should allocate an Address from the Pool", func() {
 				claim := clusterv1.IPAddressClaim{
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+						Kind:       "IPAddressClaim",
+					},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
 					Spec: clusterv1.IPAddressClaimSpec{
-						Pool: v1beta1.LocalObjectReference{
-							Group: "ipam.cluster.x-k8s.io",
-							Kind:  "InClusterIPPool",
-							Name:  poolName,
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
 						},
 					},
 				}
 				address := clusterv1.IPAddress{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
@@ -74,13 +78,13 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				}
 
 				desired := clusterv1.IPAddress{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						Labels: map[string]string{
 							clusterv1.IPPoolLabel: "test-pool",
 						},
-						OwnerReferences: []v1.OwnerReference{{
+						OwnerReferences: []metav1.OwnerReference{{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(true),
@@ -89,15 +93,13 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						}},
 					},
 					Spec: clusterv1.IPAddressSpec{
-						Claim: v1beta1.PinnedLocalObjectReference{
-							Group: "cluster.x-k8s.io",
-							Kind:  "IPAddressClaim",
-							Name:  "test",
+						ClaimRef: corev1.LocalObjectReference{
+							Name: "test",
 						},
-						Pool: v1beta1.PinnedLocalObjectReference{
-							Group: "ipam.cluster.x-k8s.io",
-							Kind:  "InClusterIPPool",
-							Name:  poolName,
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
 						},
 						Address: "10.0.0.2",
 						Prefix:  24,
