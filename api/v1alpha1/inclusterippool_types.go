@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// InClusterIPPoolSpec defines the desired state of InClusterIPPool
+// InClusterIPPoolSpec defines the desired state of InClusterIPPool.
 type InClusterIPPoolSpec struct {
 	// Subnet is the subnet to assign IP addresses from.
 	// Can be omitted if first, last and prefix are set.
@@ -33,14 +33,14 @@ type InClusterIPPoolSpec struct {
 	Gateway string `json:"gateway,omitempty"`
 }
 
-// InClusterIPPoolStatus defines the observed state of InClusterIPPool
+// InClusterIPPoolStatus defines the observed state of InClusterIPPool.
 type InClusterIPPoolStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// InClusterIPPool is the Schema for the inclusterippools API
+// InClusterIPPool is the Schema for the inclusterippools API.
 type InClusterIPPool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,7 +51,7 @@ type InClusterIPPool struct {
 
 //+kubebuilder:object:root=true
 
-// InClusterIPPoolList contains a list of InClusterIPPool
+// InClusterIPPoolList contains a list of InClusterIPPool.
 type InClusterIPPoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -123,19 +123,15 @@ func (webhook *InClusterIPPool) validate(ctx context.Context, oldPool, newPool *
 	first, err := netaddr.ParseIP(newPool.Spec.First)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, err.Error()))
-	} else {
-		if !prefix.Contains(first) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, "address is not part of spec.subnet"))
-		}
+	} else if !prefix.Contains(first) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, "address is not part of spec.subnet"))
 	}
 
 	last, err := netaddr.ParseIP(newPool.Spec.First)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, err.Error()))
-	} else {
-		if !prefix.Contains(last) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, "address is not part of spec.subnet"))
-		}
+	} else if !prefix.Contains(last) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, "address is not part of spec.subnet"))
 	}
 
 	if prefix.Bits() != uint8(newPool.Spec.Prefix) {
@@ -146,5 +142,5 @@ func (webhook *InClusterIPPool) validate(ctx context.Context, oldPool, newPool *
 		return
 	}
 
-	return
+	return //nolint:nakedret
 }

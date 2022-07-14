@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: InClusterIPPool is the Schema for the inclusterippools API
+        description: InClusterIPPool is the Schema for the inclusterippools API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +34,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: InClusterIPPoolSpec defines the desired state of InClusterIPPool
+            description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
               end:
                 description: Last is the last address that can be assigned. Must come
@@ -59,7 +59,7 @@ spec:
                 type: string
             type: object
           status:
-            description: InClusterIPPoolStatus defines the observed state of InClusterIPPool
+            description: InClusterIPPoolStatus defines the observed state of InClusterIPPool.
             type: object
         type: object
     served: true

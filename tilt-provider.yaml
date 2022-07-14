@@ -9,5 +9,5 @@ config:
   - controllers
   - internal
   - pkg
-  label: "IPAM_InCluster"
+  label: "IPAM-in-cluster"
   manager-name: "caip-in-cluster-controller-manager"

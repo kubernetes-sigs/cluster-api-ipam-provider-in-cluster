@@ -1,3 +1,4 @@
+// Package poolutil implements utility functions to manage a pool of IP addresses.
 package poolutil
 
 import (
@@ -5,18 +6,35 @@ import (
 	"errors"
 
 	"inet.af/netaddr"
-	clusterv1exp "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
-func ListAddresses(ctx context.Context, poolName string, c client.Client) (*clusterv1exp.IPAddressList, error) {
-	addresses := &clusterv1exp.IPAddressList{}
-	err := c.List(ctx, addresses, &client.MatchingLabels{clusterv1exp.IPPoolLabel: poolName})
-	return addresses, err
+// ListAddresses fetches all IPAddresses belonging to the specified pool.
+// Note: requires `index.ipAddressByCombinedPoolRef` to be set up.
+func ListAddresses(ctx context.Context, poolRef corev1.TypedLocalObjectReference, c client.Client) ([]ipamv1.IPAddress, error) {
+	addresses := &ipamv1.IPAddressList{}
+	err := c.List(ctx, addresses, client.MatchingFields{
+		index.IPAddressPoolRefCombinedField: index.IPAddressPoolRefValue(poolRef),
+	})
+	addr := []ipamv1.IPAddress{}
+	for _, a := range addresses.Items {
+		gv, _ := schema.ParseGroupVersion(a.APIVersion)
+		if gv.Group != "ipam.cluster.x-k8s.io" {
+			continue
+		}
+		addr = append(addr, a)
+	}
+	return addr, err
 }
 
-func AddressByName(addresses *clusterv1exp.IPAddressList, name string) *clusterv1exp.IPAddress {
-	for _, a := range addresses.Items {
+// AddressByName finds a specific ip address by name in a slice of addresses.
+func AddressByName(addresses []ipamv1.IPAddress, name string) *ipamv1.IPAddress {
+	for _, a := range addresses {
 		if a.Name == name {
 			return &a
 		}
@@ -24,9 +42,10 @@ func AddressByName(addresses *clusterv1exp.IPAddressList, name string) *clusterv
 	return nil
 }
 
-func IPAddressListToSet(list *clusterv1exp.IPAddressList, gateway string) (*netaddr.IPSet, error) {
+// IPAddressListToSet converts a slice of ip address resources into a set.
+func IPAddressListToSet(list []ipamv1.IPAddress, gateway string) (*netaddr.IPSet, error) {
 	builder := netaddr.IPSetBuilder{}
-	for _, a := range list.Items {
+	for _, a := range list {
 		addr, err := netaddr.ParseIP(a.Spec.Address)
 		if err != nil {
 			return nil, err
@@ -37,6 +56,7 @@ func IPAddressListToSet(list *clusterv1exp.IPAddressList, gateway string) (*neta
 	return builder.IPSet()
 }
 
+// FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
 func FindFreeAddress(iprange netaddr.IPRange, existing *netaddr.IPSet) (netaddr.IP, error) {
 	ip := iprange.From().Next()
 	for {
