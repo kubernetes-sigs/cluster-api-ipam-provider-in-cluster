@@ -26,24 +26,23 @@ func customDefaultValidateTest(ctx context.Context, obj runtime.Object, webhook 
 	return func(t *testing.T) {
 		t.Helper()
 
-		createCopy := obj.DeepCopyObject()
-		updateCopy := obj.DeepCopyObject()
-		deleteCopy := obj.DeepCopyObject()
-		defaultingUpdateCopy := updateCopy.DeepCopyObject()
-
 		t.Run("validate-on-create", func(t *testing.T) {
 			g := gomega.NewWithT(t)
+			createCopy := obj.DeepCopyObject()
 			g.Expect(webhook.Default(ctx, createCopy)).To(gomega.Succeed())
-			g.Expect(webhook.ValidateCreate(ctx, createCopy)).To(gomega.Succeed())
+			g.Expect(webhook.ValidateCreate(ctx, createCopy)).To(gomega.Succeed(), "should pass validation")
 		})
 		t.Run("validate-on-update", func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			g.Expect(webhook.Default(ctx, defaultingUpdateCopy)).To(gomega.Succeed())
+			updateCopy := obj.DeepCopyObject()
+			updatedCopy := obj.DeepCopyObject()
+			g.Expect(webhook.Default(ctx, updatedCopy)).To(gomega.Succeed())
 			g.Expect(webhook.Default(ctx, updateCopy)).To(gomega.Succeed())
-			g.Expect(webhook.ValidateUpdate(ctx, createCopy, defaultingUpdateCopy)).To(gomega.Succeed())
+			g.Expect(webhook.ValidateUpdate(ctx, updateCopy, updatedCopy)).To(gomega.Succeed(), "should pass validation")
 		})
 		t.Run("validate-on-delete", func(t *testing.T) {
 			g := gomega.NewWithT(t)
+			deleteCopy := obj.DeepCopyObject()
 			g.Expect(webhook.Default(ctx, deleteCopy)).To(gomega.Succeed())
 			g.Expect(webhook.ValidateDelete(ctx, deleteCopy)).To(gomega.Succeed())
 		})

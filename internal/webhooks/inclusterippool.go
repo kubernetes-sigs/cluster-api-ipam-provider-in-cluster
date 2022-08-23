@@ -127,7 +127,7 @@ func (webhook *InClusterIPPool) validate(ctx context.Context, oldPool, newPool *
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, "address is not part of spec.subnet"))
 	}
 
-	last, err := netaddr.ParseIP(newPool.Spec.First)
+	last, err := netaddr.ParseIP(newPool.Spec.Last)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, err.Error()))
 	} else if !prefix.Contains(last) {

@@ -1,6 +1,6 @@
 // Package v1alpha1 contains API Schema definitions for the ipam.cluster.x-k8s.io v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=ipam.cluster.x-k8s.io
+// +kubebuilder:object:generate=true
+// +groupName=ipam.cluster.x-k8s.io
 package v1alpha1
 
 import (

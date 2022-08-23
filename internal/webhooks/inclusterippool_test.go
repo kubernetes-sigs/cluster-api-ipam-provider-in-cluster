@@ -33,10 +33,12 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 			name: "derive subnet from prefix and first",
 			spec: v1alpha1.InClusterIPPoolSpec{
 				First:  "10.0.0.25",
+				Last:   "10.0.0.30",
 				Prefix: 28,
 			},
 			expect: v1alpha1.InClusterIPPoolSpec{
 				First:  "10.0.0.25",
+				Last:   "10.0.0.30",
 				Prefix: 28,
 				Subnet: "10.0.0.16/28",
 			},
@@ -46,9 +48,9 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 	for _, tt := range tests {
 		pool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
 		webhook := InClusterIPPool{}
-		t.Run(tt.name, customDefaultValidateTest(ctx, pool, &webhook))
-		g.Expect(webhook.Default(ctx, pool)).To(Succeed())
+		t.Run(tt.name, customDefaultValidateTest(ctx, pool.DeepCopyObject(), &webhook))
 
+		g.Expect(webhook.Default(ctx, pool)).To(Succeed())
 		g.Expect(pool.Spec).To(Equal(tt.expect))
 	}
 }
