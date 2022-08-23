@@ -85,7 +85,7 @@ func (webhook *InClusterIPPool) ValidateCreate(ctx context.Context, obj runtime.
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
 	}
-	return webhook.validate(ctx, nil, pool)
+	return webhook.validate(nil, pool)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
@@ -98,7 +98,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", oldObj))
 	}
-	return webhook.validate(ctx, oldPool, newPool)
+	return webhook.validate(oldPool, newPool)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
@@ -106,7 +106,7 @@ func (webhook *InClusterIPPool) ValidateDelete(_ context.Context, obj runtime.Ob
 	return nil
 }
 
-func (webhook *InClusterIPPool) validate(ctx context.Context, oldPool, newPool *v1alpha1.InClusterIPPool) (reterr error) {
+func (webhook *InClusterIPPool) validate(_, newPool *v1alpha1.InClusterIPPool) (reterr error) {
 	var allErrs field.ErrorList
 	defer func() {
 		if len(allErrs) > 0 {
