@@ -16,7 +16,20 @@ spec:
     singular: inclusterippool
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Subnet to allocate IPs from
+      jsonPath: .spec.subnet
+      name: Subnet
+      type: string
+    - description: First address of the range to allocate from
+      jsonPath: .spec.first
+      name: First
+      type: string
+    - description: Last address of the range to allocate from
+      jsonPath: .spec.last
+      name: Last
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: InClusterIPPool is the Schema for the inclusterippools API.
