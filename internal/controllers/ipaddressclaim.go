@@ -111,7 +111,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, claim, pool, address)
+		return r.reconcileDelete(ctx, claim, address)
 	}
 
 	addresses, err := poolutil.ListAddresses(ctx, claim.Spec.PoolRef, r.Client)
@@ -151,7 +151,7 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAd
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv1.IPAddressClaim, pool *v1alpha1.InClusterIPPool, address *ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv1.IPAddressClaim, address *ipamv1.IPAddress) (ctrl.Result, error) {
 	if address.Name != "" {
 		var err error
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
