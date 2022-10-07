@@ -130,5 +130,192 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 		})
 
+		When("the referenced pool uses single ip addresses", func() {
+			const poolName = "test-pool-single-ip-addresses"
+			const namespace = "test-single-ip-addresses"
+			BeforeEach(func() {
+				nsName := corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &nsName)).To(Succeed())
+
+				pool := v1alpha1.InClusterIPPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      poolName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.InClusterIPPoolSpec{
+						Addresses: []string{
+							"10.0.0.50",
+							"10.0.0.128",
+						},
+						Prefix:  24,
+						Gateway: "10.0.0.1",
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
+				Eventually(Get(&pool)).Should(Succeed())
+			})
+
+			AfterEach(func() {
+				pool := v1alpha1.InClusterIPPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      poolName,
+						Namespace: namespace,
+					},
+				}
+				Expect(k8sClient.Delete(context.Background(), &pool)).To(Succeed())
+				Eventually(Get(&pool)).Should(Not(Succeed()))
+			})
+
+			It("should allocate an Address from the Pool", func() {
+				claim1 := clusterv1.IPAddressClaim{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+						Kind:       "IPAddressClaim",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-1",
+						Namespace: namespace,
+					},
+					Spec: clusterv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+
+				claim2 := clusterv1.IPAddressClaim{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+						Kind:       "IPAddressClaim",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-2",
+						Namespace: namespace,
+					},
+					Spec: clusterv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+
+				expectedAddress1 := clusterv1.IPAddress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-1",
+						Namespace:  namespace,
+						Finalizers: []string{ProtectAddressFinalizer},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								BlockOwnerDeletion: pointer.Bool(true),
+								Controller:         pointer.Bool(true),
+								Kind:               "IPAddressClaim",
+								Name:               "test-1",
+							},
+							{
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								BlockOwnerDeletion: pointer.Bool(true),
+								Controller:         pointer.Bool(false),
+								Kind:               "InClusterIPPool",
+								Name:               "test-pool-single-ip-addresses",
+							},
+						},
+					},
+					Spec: clusterv1.IPAddressSpec{
+						ClaimRef: corev1.LocalObjectReference{
+							Name: "test-1",
+						},
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+						Address: "10.0.0.50",
+						Prefix:  24,
+						Gateway: "10.0.0.1",
+					},
+				}
+
+				expectedAddress2 := clusterv1.IPAddress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-2",
+						Namespace:  namespace,
+						Finalizers: []string{ProtectAddressFinalizer},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								BlockOwnerDeletion: pointer.Bool(true),
+								Controller:         pointer.Bool(true),
+								Kind:               "IPAddressClaim",
+								Name:               "test-2",
+							},
+							{
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								BlockOwnerDeletion: pointer.Bool(true),
+								Controller:         pointer.Bool(false),
+								Kind:               "InClusterIPPool",
+								Name:               "test-pool-single-ip-addresses",
+							},
+						},
+					},
+					Spec: clusterv1.IPAddressSpec{
+						ClaimRef: corev1.LocalObjectReference{
+							Name: "test-2",
+						},
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+						Address: "10.0.0.128",
+						Prefix:  24,
+						Gateway: "10.0.0.1",
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &claim1)).To(Succeed())
+				Expect(k8sClient.Create(context.Background(), &claim2)).To(Succeed())
+				// Eventually(Object(&claim)).Should(HaveField("Status.Address.Name", Equal(claim.ObjectMeta.Name)))
+
+				Eventually(Object(&clusterv1.IPAddress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      expectedAddress1.GetName(),
+						Namespace: namespace,
+					},
+				})).WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
+					EqualObject(&expectedAddress1, IgnoreAutogeneratedMetadata, IgnorePaths{
+						"TypeMeta",
+						"ObjectMeta.OwnerReferences[0].UID",
+						"ObjectMeta.OwnerReferences[1].UID",
+						"Spec.Claim.UID",
+						"Spec.Pool.UID",
+					}),
+				)
+
+				Eventually(Object(&clusterv1.IPAddress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      expectedAddress2.GetName(),
+						Namespace: namespace,
+					},
+				})).WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
+					EqualObject(&expectedAddress2, IgnoreAutogeneratedMetadata, IgnorePaths{
+						"TypeMeta",
+						"ObjectMeta.OwnerReferences[0].UID",
+						"ObjectMeta.OwnerReferences[1].UID",
+						"Spec.Claim.UID",
+						"Spec.Pool.UID",
+					}),
+				)
+			})
+		})
+
 	})
 })

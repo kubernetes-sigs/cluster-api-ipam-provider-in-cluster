@@ -49,6 +49,13 @@ spec:
           spec:
             description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
+              addresses:
+                description: Addresses is an array of IP addresses that can  be assigned.
+                  This set of addresses can be non-contiguous. Can be omitted if subnet,
+                  or first and last is set.
+                items:
+                  type: string
+                type: array
               end:
                 description: Last is the last address that can be assigned. Must come
                   after first and needs to fit into a common subnet. If unset, the
@@ -68,7 +75,7 @@ spec:
                 type: string
               subnet:
                 description: Subnet is the subnet to assign IP addresses from. Can
-                  be omitted if first, last and prefix are set.
+                  be omitted if addresses or first, last and prefix are set.
                 type: string
             type: object
           status:

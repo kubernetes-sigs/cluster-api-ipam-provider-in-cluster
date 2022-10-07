@@ -6,8 +6,14 @@ import (
 
 // InClusterIPPoolSpec defines the desired state of InClusterIPPool.
 type InClusterIPPoolSpec struct {
+	// Addresses is an array of IP addresses that can  be assigned. This set of
+	// addresses can be non-contiguous. Can be omitted if subnet, or first and
+	// last is set.
+	// +optional
+	Addresses []string `json:"addresses,omitempty"`
+
 	// Subnet is the subnet to assign IP addresses from.
-	// Can be omitted if first, last and prefix are set.
+	// Can be omitted if addresses or first, last and prefix are set.
 	// +optional
 	Subnet string `json:"subnet,omitempty"`
 
