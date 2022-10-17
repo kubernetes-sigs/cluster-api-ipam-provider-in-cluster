@@ -3,8 +3,8 @@ module github.com/telekom/cluster-api-ipam-provider-in-cluster
 go 1.18
 
 require (
-	github.com/onsi/ginkgo/v2 v2.2.0
-	github.com/onsi/gomega v1.20.2
+	github.com/onsi/ginkgo/v2 v2.3.0
+	github.com/onsi/gomega v1.22.1
 	github.com/pkg/errors v0.9.1
 	inet.af/netaddr v0.0.0-20220617031823-097006376321
 	k8s.io/api v0.25.1
