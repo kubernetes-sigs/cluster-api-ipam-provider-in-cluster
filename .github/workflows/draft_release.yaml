@@ -51,7 +51,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4.0.1
         with:
-          images: ghcr.io/telekom/cluster-api-provider-in-cluster
+          images: ghcr.io/telekom/cluster-api-ipam-provider-in-cluster
       
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v3.1.1
