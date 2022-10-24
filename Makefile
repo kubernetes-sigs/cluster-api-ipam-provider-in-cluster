@@ -105,7 +105,7 @@ clean-release:
 
 .PHONY: clean-release-git
 clean-release-git: ## Restores the git files usually modified during a release
-	git restore ./*manager_image_patch.yaml ./*manager_pull_policy.yaml
+	git restore ./*manager_image_patch.yaml
 
 .PHONY: release-manifests
 release-manifests: kustomize $(RELEASE_DIR)
