@@ -4,6 +4,7 @@ package poolutil
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"inet.af/netaddr"
 	corev1 "k8s.io/api/core/v1"
@@ -52,19 +53,27 @@ func IPAddressListToSet(list []ipamv1.IPAddress, gateway string) (*netaddr.IPSet
 		}
 		builder.Add(addr)
 	}
+	gw, err := netaddr.ParseIP(gateway)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse gateway ip: %w", err)
+	}
+	builder.Add(gw)
 
 	return builder.IPSet()
 }
 
 // FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
 func FindFreeAddress(iprange netaddr.IPRange, existing *netaddr.IPSet) (netaddr.IP, error) {
-	ip := iprange.From().Next()
+	ip := iprange.From()
 	for {
 		if !existing.Contains(ip) {
 			return ip, nil
 		}
 		ip = ip.Next()
 		if ip == iprange.To() {
+			if !existing.Contains(ip) {
+				return ip, nil
+			}
 			return netaddr.IP{}, errors.New("no address available")
 		}
 	}

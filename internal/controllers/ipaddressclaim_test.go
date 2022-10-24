@@ -34,7 +34,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						First:   "10.0.0.1",
 						Last:    "10.0.0.254",
 						Prefix:  24,
-						Gateway: "10.0.0.1",
+						Gateway: "10.0.0.2",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -109,9 +109,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
-						Address: "10.0.0.2",
+						Address: "10.0.0.1",
 						Prefix:  24,
-						Gateway: "10.0.0.1",
+						Gateway: "10.0.0.2",
 					},
 				}
 
