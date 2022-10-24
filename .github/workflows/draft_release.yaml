@@ -53,6 +53,11 @@ jobs:
         with:
           images: ghcr.io/telekom/cluster-api-ipam-provider-in-cluster
       
+      - name: Get Version Information
+        id: version_info
+        run: |
+          echo "LDFLAGS=\"$(hack/version.sh)\"" >> $GITHUB_OUTPUT
+
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v3.1.1
         with:
@@ -60,3 +65,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ldflags=${{ steps.version_info.outputs.LDFLAGS }}
