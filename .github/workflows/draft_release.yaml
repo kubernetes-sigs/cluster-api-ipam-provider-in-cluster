@@ -7,29 +7,26 @@ on:
 
 jobs:
   draft_release:
-    name: create draft release
+    name: Create Draft Release
     runs-on: ubuntu-latest
     steps:
       # - name: Set env
       #   run:  echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
-      - name: checkout code
+      - name: Checkout the Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Install go
+      - name: Install Go
         uses: actions/setup-go@v3
         with:
           go-version: '^1.18'
       # - name: generate release notes
       #   run: |
       #     make release-notes
-      - name: generate release manifests
+      - name: Create Release Artifacts
         run: |
-          make release-manifests
-      - name: generate release metadata
-        run: |
-          make release-metadata
-      - name: Release
+          make release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
@@ -37,7 +34,7 @@ jobs:
           # body_path: _releasenotes/${{ env.RELEASE_TAG }}.md
 
   release_image:
-    name: Build and push release image
+    name: Build and Push Release Image
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -50,13 +47,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract Metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4.0.1
         with:
           images: ghcr.io/telekom/cluster-api-provider-in-cluster
       
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v3.1.1
         with:
           context: .
