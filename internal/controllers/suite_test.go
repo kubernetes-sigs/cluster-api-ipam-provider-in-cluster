@@ -81,7 +81,7 @@ var _ = BeforeSuite(func() {
 		(&IPAddressClaimReconciler{
 			Client: mgr.GetClient(),
 			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr),
+		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 
 	go func() {

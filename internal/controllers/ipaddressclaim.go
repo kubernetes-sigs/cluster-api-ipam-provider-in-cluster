@@ -14,6 +14,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +24,7 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/predicates"
+	ipampredicates "github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/predicates"
 )
 
 const (
@@ -38,13 +39,15 @@ const (
 type IPAddressClaimReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	WatchFilterValue string
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *IPAddressClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
-			predicates.ClaimReferencesPoolKind(metav1.GroupKind{
+			ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
 				Group: v1alpha1.GroupVersion.Group,
 				Kind:  "InClusterIPPool",
 			}),
@@ -54,11 +57,12 @@ func (r *IPAddressClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			MaxConcurrentReconciles: 1,
 		}).
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
-			predicates.AddressReferencesPoolKind(metav1.GroupKind{
+			ipampredicates.AddressReferencesPoolKind(metav1.GroupKind{
 				Group: v1alpha1.GroupVersion.Group,
 				Kind:  "InClusterIPPool",
 			}),
 		)).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
 }
 
