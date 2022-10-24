@@ -72,7 +72,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
+docker-build: test licenses-report ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
 .PHONY: docker-push
@@ -97,6 +97,7 @@ release: clean-release
 	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent
 	$(MAKE) release-manifests
 	$(MAKE) release-metadata
+	$(MAKE) licenses-report
 	$(MAKE) clean-release-git
 
 .PHONY: clean-release
@@ -114,6 +115,12 @@ release-manifests: kustomize $(RELEASE_DIR)
 .PHONY: release-metadata
 release-metadata:
 	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+licenses-report: go-licenses
+	rm -rf $(RELEASE_DIR)/licenses
+	$(GO_LICENSES) save --save_path $(RELEASE_DIR)/licenses ./...
+	$(GO_LICENSES) report --template hack/licenses.md.tpl ./... > $(RELEASE_DIR)/licenses/licenses.md
+	(cd out/licenses && tar -czf ../licenses.tar.gz *)
 
 ##@ Release Utils
 
@@ -164,3 +171,8 @@ ENVTEST = $(HACK_BIN)/setup-envtest
 .PHONY: envtest
 envtest: ## Download envtest-setup locally if necessary.
 	env GOBIN=$(HACK_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+GO_LICENSES = $(HACK_BIN)/go-licenses
+.PHONY: go-licenses
+go-licenses:
+	env GOBIN=$(HACK_BIN) go install github.com/google/go-licenses@latest

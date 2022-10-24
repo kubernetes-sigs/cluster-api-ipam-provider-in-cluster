@@ -37,3 +37,7 @@ Licensed under the **Apache License, Version 2.0** (the "License"); you may not 
 You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the [LICENSE](./LICENSE) for the specific language governing permissions and limitations under the License.
+
+### Dependency Licenses
+
+You can find the licenses of used Go dependencies as a `licenses.tar.gz` archive as part of our [releases](https://github.com/telekom/cluster-api-ipam-provider-in-cluster/releases) and in the `/license` directory contained in our container images available at [ghcr.io/telekom/cluster-api-ipam-provider-in-cluster](https://ghcr.io/telekom/cluster-api-ipam-provider-in-cluster).
