@@ -1,12 +1,8 @@
 
 # Binaries for programs and plugins
+bin/
 *.exe
 *.exe~
-*.dll
-*.so
-*.dylib
-bin
-testbin/*
 
 # Test binary, build with `go test -c`
 *.test
@@ -17,16 +13,18 @@ testbin/*
 # IntelliJ
 .idea/
 *.iml
+.idea
 
 # VSCode
 .vscode/
 *.code-workspace
 
-# Kubernetes Generated files - skip generated files, except for vendored files
-!vendor/**/zz_generated.*
-
-# editor and IDE paraphernalia
-.idea
 *.swp
 *.swo
 *~
+
+# Kubernetes Generated files - skip generated files, except for vendored files
+!vendor/**/zz_generated.*
+
+.tiltbuild/
+out/

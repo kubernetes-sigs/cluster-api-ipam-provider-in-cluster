@@ -7,5 +7,5 @@ spec:
   template:
     spec:
       containers:
-      - image: gcr.io/cluster-api-ipam-provider-in-cluster/release/manager:main
+      - image: ghcr.io/telekom/cluster-api-ipam-provider-in-cluster:main
         name: manager

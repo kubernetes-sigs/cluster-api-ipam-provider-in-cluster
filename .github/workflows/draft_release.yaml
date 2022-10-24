@@ -12,22 +12,28 @@ jobs:
     steps:
       # - name: Set env
       #   run:  echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
-      # - name: checkout code
-      #   uses: actions/checkout@v3
-      #   with:
-      #     fetch-depth: 0
-      # - name: Install go
-      #   uses: actions/setup-go@v3
-      #   with:
-      #     go-version: '^1.18'
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
       # - name: generate release notes
       #   run: |
       #     make release-notes
+      - name: generate release manifests
+        run: |
+          make release-manifests
+      - name: generate release metadata
+        run: |
+          make release-metadata
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          # files: out/*
+          files: out/*
           # body_path: _releasenotes/${{ env.RELEASE_TAG }}.md
 
   release_image:

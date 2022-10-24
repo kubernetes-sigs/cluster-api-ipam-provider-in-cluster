@@ -79,6 +79,21 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+##@ Release
+
+RELEASE_DIR ?= out
+
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)/
+
+.PHONY: release-manifests
+release-manifests: kustomize $(RELEASE_DIR)
+	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/ipam-components.yaml
+
+.PHONY: release-metadata
+release-metadata:
+	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
 ##@ Deployment
 
 ifndef ignore-not-found
