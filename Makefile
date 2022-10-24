@@ -81,10 +81,31 @@ docker-push: ## Push docker image with the manager.
 
 ##@ Release
 
+RELEASE_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+
 RELEASE_DIR ?= out
 
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
+
+.PHONY: release
+release: clean-release
+	@if [ -z "${RELEASE_TAG}" ]; then echo "RELEASE_TAG is not set"; exit 1; fi
+	@if ! [ -z "$$(git status --porcelain)" ]; then echo "Your local git repository contains uncommitted changes, use git clean before proceeding."; exit 1; fi
+	git checkout "${RELEASE_TAG}"
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(IMG) MANIFEST_TAG=$(RELEASE_TAG)
+	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent
+	$(MAKE) release-manifests
+	$(MAKE) release-metadata
+	$(MAKE) clean-release-git
+
+.PHONY: clean-release
+clean-release:
+	rm -rf $(RELEASE_DIR)
+
+.PHONY: clean-release-git
+clean-release-git: ## Restores the git files usually modified during a release
+	git restore ./*manager_image_patch.yaml ./*manager_pull_policy.yaml
 
 .PHONY: release-manifests
 release-manifests: kustomize $(RELEASE_DIR)
@@ -93,6 +114,18 @@ release-manifests: kustomize $(RELEASE_DIR)
 .PHONY: release-metadata
 release-metadata:
 	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+##@ Release Utils
+
+.PHONY: set-manifest-pull-policy
+set-manifest-pull-policy:
+	$(info Updating kustomize pull policy file for manager resources)
+	sed -i'' -e 's@imagePullPolicy: .*@imagePullPolicy: '"$(PULL_POLICY)"'@' ./config/default/manager_image_patch.yaml
+
+.PHONY: set-manifest-image
+set-manifest-image:
+	$(info Updating kustomize image patch file for manager resource)
+	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:$(MANIFEST_TAG)"'@' ./config/default/manager_image_patch.yaml
 
 ##@ Deployment
 
