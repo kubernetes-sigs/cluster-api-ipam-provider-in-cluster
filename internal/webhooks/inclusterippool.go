@@ -138,8 +138,11 @@ func (webhook *InClusterIPPool) validate(_, newPool *v1alpha1.InClusterIPPool) (
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "does not match prefix of spec.subnet"))
 	}
 
-	if first == (netaddr.IP{}) || last == (netaddr.IP{}) {
-		return
+	if newPool.Spec.Gateway != "" {
+		_, err := netaddr.ParseIP(newPool.Spec.Gateway)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, err.Error()))
+		}
 	}
 
 	return //nolint:nakedret
