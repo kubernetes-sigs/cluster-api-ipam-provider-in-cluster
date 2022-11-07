@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/onsi/ginkgo/v2 v2.4.0
-	github.com/onsi/gomega v1.22.1
+	github.com/onsi/gomega v1.24.0
 	github.com/pkg/errors v0.9.1
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 	k8s.io/api v0.25.3
