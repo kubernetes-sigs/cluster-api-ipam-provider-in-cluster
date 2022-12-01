@@ -175,24 +175,24 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv1.IPAddressClaim, pool *v1alpha1.InClusterIPPool, addresses []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
-	existing, err := poolutil.IPAddressListToSet(addresses, pool.Spec.Gateway)
+func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv1.IPAddressClaim, pool *v1alpha1.InClusterIPPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
+	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, pool.Spec.Gateway)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert IPAddressList to set: %w", err)
 	}
 
-	iprange, err := ipPoolToRange(pool)
+	poolIPSet, err := ipPoolToIPSet(pool)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert pool to range: %w", err)
 	}
 
-	free, err := poolutil.FindFreeAddress(iprange, existing)
+	freeIP, err := poolutil.FindFreeAddress(poolIPSet, inUseIPSet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find free address: %w", err)
 	}
 
 	address := ipamutil.NewIPAddress(c, pool)
-	address.Spec.Address = free.String()
+	address.Spec.Address = freeIP.String()
 	address.Spec.Gateway = pool.Spec.Gateway
 	address.Spec.Prefix = pool.Spec.Prefix
 
@@ -205,14 +205,28 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv
 	return &address, nil
 }
 
-func ipPoolToRange(pool *v1alpha1.InClusterIPPool) (netaddr.IPRange, error) {
+func ipPoolToIPSet(pool *v1alpha1.InClusterIPPool) (*netaddr.IPSet, error) {
+	builder := netaddr.IPSetBuilder{}
+
+	if len(pool.Spec.Addresses) > 0 {
+		for _, addressStr := range pool.Spec.Addresses {
+			addr, err := netaddr.ParseIP(addressStr)
+			if err != nil {
+				return nil, err
+			}
+			builder.Add(addr)
+		}
+		return builder.IPSet()
+	}
+
 	start, err := netaddr.ParseIP(pool.Spec.First)
 	if err != nil {
-		return netaddr.IPRange{}, err
+		return nil, err
 	}
 	end, err := netaddr.ParseIP(pool.Spec.Last)
 	if err != nil {
-		return netaddr.IPRange{}, err
+		return nil, err
 	}
-	return netaddr.IPRangeFrom(start, end), nil
+	builder.AddRange(netaddr.IPRangeFrom(start, end))
+	return builder.IPSet()
 }

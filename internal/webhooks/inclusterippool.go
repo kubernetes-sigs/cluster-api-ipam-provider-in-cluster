@@ -41,6 +41,10 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
 	}
 
+	if len(pool.Spec.Addresses) > 0 {
+		return nil
+	}
+
 	if pool.Spec.Subnet == "" {
 		first, err := netaddr.ParseIP(pool.Spec.First)
 		if err != nil {
@@ -66,10 +70,10 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 		}
 
 		if pool.Spec.First == "" {
-			pool.Spec.First = prefix.Range().From().Next().String()
+			pool.Spec.First = prefix.Range().From().Next().String() // omits the first address, the assumed gateway
 		}
 		if pool.Spec.Last == "" {
-			pool.Spec.Last = prefix.Range().To().Prior().String()
+			pool.Spec.Last = prefix.Range().To().Prior().String() // omits the last address, the assumed broadcast
 		}
 		if pool.Spec.Prefix == 0 {
 			pool.Spec.Prefix = int(prefix.Bits())
@@ -114,6 +118,11 @@ func (webhook *InClusterIPPool) validate(_, newPool *v1alpha1.InClusterIPPool) (
 		}
 	}()
 
+	if len(newPool.Spec.Addresses) > 0 {
+		allErrs = append(allErrs, validateAddresses(newPool)...)
+		return
+	}
+
 	prefix, err := netaddr.ParseIPPrefix(newPool.Spec.Subnet)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet"), newPool.Spec.Subnet, err.Error()))
@@ -146,4 +155,51 @@ func (webhook *InClusterIPPool) validate(_, newPool *v1alpha1.InClusterIPPool) (
 	}
 
 	return //nolint:nakedret
+}
+
+func validateAddresses(newPool *v1alpha1.InClusterIPPool) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if newPool.Spec.Subnet != "" {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet"), newPool.Spec.Subnet, "subnet may not be used with addresses"))
+	}
+
+	if newPool.Spec.First != "" {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "start"), newPool.Spec.First, "start may not be used with addresses"))
+	}
+
+	if newPool.Spec.Last != "" {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "end"), newPool.Spec.Last, "end may not be used with addresses"))
+	}
+
+	if newPool.Spec.Gateway == "" {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, "gateway is required when using addresses"))
+	}
+
+	if newPool.Spec.Prefix == 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "a valid prefix is required when using addresses"))
+	}
+
+	ips := make([]netaddr.IP, len(newPool.Spec.Addresses))
+	for i, address := range newPool.Spec.Addresses {
+		ip, err := netaddr.ParseIP(address)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address, "provided address is not a valid ip address"))
+			continue
+		}
+		ips[i] = ip
+	}
+
+	prefix, err := netaddr.ParseIPPrefix(fmt.Sprintf("%s/%d", newPool.Spec.Addresses[0], newPool.Spec.Prefix))
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "provided prefix is not valid"))
+	} else {
+		for _, address := range ips {
+			if !prefix.Contains(address) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address.String(), "provided address belongs to a different subnet than others"))
+			}
+		}
+	}
+
+	return allErrs
 }

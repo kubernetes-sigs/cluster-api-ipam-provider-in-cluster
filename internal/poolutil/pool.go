@@ -63,18 +63,18 @@ func IPAddressListToSet(list []ipamv1.IPAddress, gateway string) (*netaddr.IPSet
 }
 
 // FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
-func FindFreeAddress(iprange netaddr.IPRange, existing *netaddr.IPSet) (netaddr.IP, error) {
-	ip := iprange.From()
-	for {
-		if !existing.Contains(ip) {
-			return ip, nil
-		}
-		ip = ip.Next()
-		if ip == iprange.To() {
-			if !existing.Contains(ip) {
+func FindFreeAddress(poolIPSet *netaddr.IPSet, inUseIPSet *netaddr.IPSet) (netaddr.IP, error) {
+	for _, iprange := range poolIPSet.Ranges() {
+		ip := iprange.From()
+		for {
+			if !inUseIPSet.Contains(ip) {
 				return ip, nil
 			}
-			return netaddr.IP{}, errors.New("no address available")
+			if ip == iprange.To() {
+				break
+			}
+			ip = ip.Next()
 		}
 	}
+	return netaddr.IP{}, errors.New("no address available")
 }

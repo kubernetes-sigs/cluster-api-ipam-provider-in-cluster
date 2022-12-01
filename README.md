@@ -4,7 +4,7 @@ This is a IPAM provider for Cluster API that manages pools of IP addresses using
 
 ## Usage
 
-This provider comes with a `InClusterIPPool` resource to specify the pools from which addresses should be assigned. You can either provide a subnet in CIDR notation, or specify an address range using start and end addresses, as well as a prefix length.
+This provider comes with a `InClusterIPPool` resource to specify the pools from which addresses should be assigned. You can provide a subnet in CIDR notation, or specify an address range using start and end addresses, as well as a prefix length, or a set of addresses with the prefix and gateway.
 
 ```yaml
 apiVersion: ipam.cluster.x-k8s.io/v1alpha1
@@ -24,6 +24,21 @@ metadata:
 spec:
   first: 10.0.0.10
   last: 10.10.0.42
+  prefix: 24
+  gateway: 10.0.0.1
+```
+
+```yaml
+apiVersion: ipam.cluster.x-k8s.io/v1alpha1
+kind: InClusterIPPool
+metadata:
+  name: inclusterippool-sample
+spec:
+  addresses:
+    - 10.0.0.10
+    - 10.0.0.15
+    - 10.0.0.24
+    - 10.0.0.32
   prefix: 24
   gateway: 10.0.0.1
 ```
