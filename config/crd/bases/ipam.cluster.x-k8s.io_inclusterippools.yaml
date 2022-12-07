@@ -50,7 +50,7 @@ spec:
             description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
               addresses:
-                description: Addresses is an array of IP addresses that can  be assigned.
+                description: Addresses is a list of IP addresses that can be assigned.
                   This set of addresses can be non-contiguous. Can be omitted if subnet,
                   or first and last is set.
                 items:

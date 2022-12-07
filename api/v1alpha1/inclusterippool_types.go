@@ -6,7 +6,7 @@ import (
 
 // InClusterIPPoolSpec defines the desired state of InClusterIPPool.
 type InClusterIPPoolSpec struct {
-	// Addresses is a list of IP addresses that can  be assigned. This set of
+	// Addresses is a list of IP addresses that can be assigned. This set of
 	// addresses can be non-contiguous. Can be omitted if subnet, or first and
 	// last is set.
 	// +optional
