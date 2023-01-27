@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/poolutil"
@@ -35,6 +36,11 @@ const (
 	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
 )
 
+type genericInClusterPool interface {
+	client.Object
+	PoolSpec() *v1alpha1.InClusterIPPoolSpec
+}
+
 // IPAddressClaimReconciler reconciles a InClusterIPPool object.
 type IPAddressClaimReconciler struct {
 	client.Client
@@ -47,10 +53,16 @@ type IPAddressClaimReconciler struct {
 func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
-			ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-				Group: v1alpha1.GroupVersion.Group,
-				Kind:  "InClusterIPPool",
-			}),
+			predicate.Or(
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha1.GroupVersion.Group,
+					Kind:  "InClusterIPPool",
+				}),
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha1.GroupVersion.Group,
+					Kind:  "GlobalInClusterIPPool",
+				}),
+			),
 		)).
 		WithOptions(controller.Options{
 			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
@@ -100,9 +112,20 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	pool := &v1alpha1.InClusterIPPool{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, pool); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
+	var pool genericInClusterPool
+
+	if claim.Spec.PoolRef.Kind == "InClusterIPPool" {
+		icippool := &v1alpha1.InClusterIPPool{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
+		}
+		pool = icippool
+	} else if claim.Spec.PoolRef.Kind == "GlobalInClusterIPPool" {
+		gicippool := &v1alpha1.GlobalInClusterIPPool{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
+		}
+		pool = gicippool
 	}
 
 	address := &ipamv1.IPAddress{}
@@ -126,7 +149,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcile(ctx, claim, pool, addresses)
 }
 
-func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAddressClaim, pool *v1alpha1.InClusterIPPool, addresses []ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAddressClaim, pool genericInClusterPool, addresses []ipamv1.IPAddress) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	if pool == nil {
@@ -135,7 +158,7 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAd
 		return ctrl.Result{}, nil
 	}
 
-	log = log.WithValues("pool name", pool.Name)
+	log = log.WithValues("pool name", pool.GetName())
 
 	address := poolutil.AddressByName(addresses, c.Name)
 	if address == nil {
@@ -175,8 +198,9 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv1.IPAddressClaim, pool *v1alpha1.InClusterIPPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
-	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, pool.Spec.Gateway)
+func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
+	poolSpec := pool.PoolSpec()
+	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, poolSpec.Gateway)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert IPAddressList to set: %w", err)
 	}
@@ -193,8 +217,8 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv
 
 	address := ipamutil.NewIPAddress(c, pool)
 	address.Spec.Address = freeIP.String()
-	address.Spec.Gateway = pool.Spec.Gateway
-	address.Spec.Prefix = pool.Spec.Prefix
+	address.Spec.Gateway = poolSpec.Gateway
+	address.Spec.Prefix = poolSpec.Prefix
 
 	controllerutil.AddFinalizer(&address, ProtectAddressFinalizer)
 
@@ -205,11 +229,13 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv
 	return &address, nil
 }
 
-func ipPoolToIPSet(pool *v1alpha1.InClusterIPPool) (*netaddr.IPSet, error) {
+func ipPoolToIPSet(pool genericInClusterPool) (*netaddr.IPSet, error) {
 	builder := netaddr.IPSetBuilder{}
 
-	if len(pool.Spec.Addresses) > 0 {
-		for _, addressStr := range pool.Spec.Addresses {
+	poolSpec := pool.PoolSpec()
+
+	if len(poolSpec.Addresses) > 0 {
+		for _, addressStr := range poolSpec.Addresses {
 			addr, err := netaddr.ParseIP(addressStr)
 			if err != nil {
 				return nil, err
@@ -219,11 +245,11 @@ func ipPoolToIPSet(pool *v1alpha1.InClusterIPPool) (*netaddr.IPSet, error) {
 		return builder.IPSet()
 	}
 
-	start, err := netaddr.ParseIP(pool.Spec.First)
+	start, err := netaddr.ParseIP(poolSpec.First)
 	if err != nil {
 		return nil, err
 	}
-	end, err := netaddr.ParseIP(pool.Spec.Last)
+	end, err := netaddr.ParseIP(poolSpec.Last)
 	if err != nil {
 		return nil, err
 	}

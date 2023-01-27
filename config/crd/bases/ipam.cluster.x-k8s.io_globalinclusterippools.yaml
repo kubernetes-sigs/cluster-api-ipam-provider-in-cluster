@@ -1,0 +1,96 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: globalinclusterippools.ipam.cluster.x-k8s.io
+spec:
+  group: ipam.cluster.x-k8s.io
+  names:
+    kind: GlobalInClusterIPPool
+    listKind: GlobalInClusterIPPoolList
+    plural: globalinclusterippools
+    singular: globalinclusterippool
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Subnet to allocate IPs from
+      jsonPath: .spec.subnet
+      name: Subnet
+      type: string
+    - description: First address of the range to allocate from
+      jsonPath: .spec.first
+      name: First
+      type: string
+    - description: Last address of the range to allocate from
+      jsonPath: .spec.last
+      name: Last
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GlobalInClusterIPPool is the Schema for the global inclusterippools
+          API. This pool type is cluster scoped. IPAddressClaims can reference pools
+          of this type from any any namespace.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
+            properties:
+              addresses:
+                description: Addresses is a list of IP addresses that can be assigned.
+                  This set of addresses can be non-contiguous. Can be omitted if subnet,
+                  or first and last is set.
+                items:
+                  type: string
+                type: array
+              end:
+                description: Last is the last address that can be assigned. Must come
+                  after first and needs to fit into a common subnet. If unset, the
+                  second last address of subnet will be used.
+                type: string
+              gateway:
+                description: Gateway
+                type: string
+              prefix:
+                description: Prefix is the network prefix to use. If unset the prefix
+                  from the subnet will be used.
+                maximum: 128
+                type: integer
+              start:
+                description: First is the first address that can be assigned. If unset,
+                  the second address of subnet will be used.
+                type: string
+              subnet:
+                description: Subnet is the subnet to assign IP addresses from. Can
+                  be omitted if addresses or first, last and prefix are set.
+                type: string
+            type: object
+          status:
+            description: InClusterIPPoolStatus defines the observed state of InClusterIPPool.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

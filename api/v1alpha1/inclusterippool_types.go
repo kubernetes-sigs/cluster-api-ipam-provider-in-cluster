@@ -67,6 +67,48 @@ type InClusterIPPoolList struct {
 	Items           []InClusterIPPool `json:"items"`
 }
 
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="Subnet",type="string",JSONPath=".spec.subnet",description="Subnet to allocate IPs from"
+// +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
+// +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
+
+// GlobalInClusterIPPool is the Schema for the global inclusterippools API.
+// This pool type is cluster scoped. IPAddressClaims can reference
+// pools of this type from any any namespace.
+type GlobalInClusterIPPool struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   InClusterIPPoolSpec   `json:"spec,omitempty"`
+	Status InClusterIPPoolStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// GlobalInClusterIPPoolList contains a list of GlobalInClusterIPPool.
+type GlobalInClusterIPPoolList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []GlobalInClusterIPPool `json:"items"`
+}
+
 func init() {
-	SchemeBuilder.Register(&InClusterIPPool{}, &InClusterIPPoolList{})
+	SchemeBuilder.Register(
+		&InClusterIPPool{},
+		&InClusterIPPoolList{},
+		&GlobalInClusterIPPool{},
+		&GlobalInClusterIPPoolList{},
+	)
+}
+
+// PoolSpec implements the genericInClusterPool interface.
+func (p *InClusterIPPool) PoolSpec() *InClusterIPPoolSpec {
+	return &p.Spec
+}
+
+// PoolSpec implements the genericInClusterPool interface.
+func (p *GlobalInClusterIPPool) PoolSpec() *InClusterIPPoolSpec {
+	return &p.Spec
 }
