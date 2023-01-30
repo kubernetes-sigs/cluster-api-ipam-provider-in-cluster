@@ -141,7 +141,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.reconcileDelete(ctx, claim, address)
 	}
 
-	addresses, err := poolutil.ListAddresses(ctx, claim.Spec.PoolRef, r.Client)
+	addresses, err := poolutil.ListAddresses(ctx, r.Client, claim.Namespace, claim.Spec.PoolRef)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
 	}

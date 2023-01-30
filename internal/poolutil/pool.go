@@ -17,11 +17,14 @@ import (
 
 // ListAddresses fetches all IPAddresses belonging to the specified pool.
 // Note: requires `index.ipAddressByCombinedPoolRef` to be set up.
-func ListAddresses(ctx context.Context, poolRef corev1.TypedLocalObjectReference, c client.Client) ([]ipamv1.IPAddress, error) {
+func ListAddresses(ctx context.Context, c client.Client, namespace string, poolRef corev1.TypedLocalObjectReference) ([]ipamv1.IPAddress, error) {
 	addresses := &ipamv1.IPAddressList{}
-	err := c.List(ctx, addresses, client.MatchingFields{
-		index.IPAddressPoolRefCombinedField: index.IPAddressPoolRefValue(poolRef),
-	})
+	err := c.List(ctx, addresses,
+		client.MatchingFields{
+			index.IPAddressPoolRefCombinedField: index.IPAddressPoolRefValue(poolRef),
+		},
+		client.InNamespace(namespace),
+	)
 	addr := []ipamv1.IPAddress{}
 	for _, a := range addresses.Items {
 		gv, _ := schema.ParseGroupVersion(a.APIVersion)
