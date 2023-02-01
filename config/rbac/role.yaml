@@ -9,6 +9,32 @@ rules:
 - apiGroups:
   - ipam.cluster.x-k8s.io
   resources:
+  - globalinclusterippools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
+  - globalinclusterippools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
+  - globalinclusterippools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
   - inclusterippools
   verbs:
   - create
