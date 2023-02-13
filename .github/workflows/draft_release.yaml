@@ -58,7 +58,7 @@ jobs:
       
       - name: Extract Metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: ghcr.io/telekom/cluster-api-ipam-provider-in-cluster
       
