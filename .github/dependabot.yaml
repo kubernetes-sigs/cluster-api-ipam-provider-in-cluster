@@ -12,3 +12,7 @@ updates:
     interval: "weekly"
   commit-message:
     prefix: ":seedling:"
+  ignore:
+  - dependency-name: "k8s.io/*"
+    # We follow the minor version used in cluster-api, but can upgrade to newer patch releases independently
+    update-types: ["version-update:semver-major", "version-update:semver-minor"]
