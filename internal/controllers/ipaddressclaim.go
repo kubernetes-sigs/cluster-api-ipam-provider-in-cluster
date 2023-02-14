@@ -173,7 +173,9 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAd
 		}
 	}
 	if !address.DeletionTimestamp.IsZero() {
-		panic("oh no")
+		// We prevent deleting IPAddresses while their corresponding IPClaim still exists since we cannot guarantee that the IP
+		// wil remain the same when we recreate it.
+		log.Info("Address is marked for deletion, but deletion is prevented until the claim is deleted as well.", "address", address.Name)
 	}
 
 	c.Status.AddressRef = corev1.LocalObjectReference{Name: address.Name}
