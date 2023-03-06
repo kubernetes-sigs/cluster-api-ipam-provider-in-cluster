@@ -90,7 +90,7 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/coredns/caddy v1.1.0 h1:ezvsPrT/tA/7pYDBZxu0cT0VmWk75AfIaf6GSYCNMf0=
-github.com/coredns/corefile-migration v1.0.18 h1:zs5PJm/VGZVje1ESRj6ZqyUuVsVfagExkbLU2QKV5mI=
+github.com/coredns/corefile-migration v1.0.20 h1:MdOkT6F3ehju/n9tgxlGct8XAajOX2vN+wG7To4BWSI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -714,8 +714,8 @@ k8s.io/utils v0.0.0-20230209194617-a36077c30491/go.mod h1:OLgZIPagt7ERELqWJFomSt
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sigs.k8s.io/cluster-api v1.3.3 h1:sHRAbuev6+bz3OAySmdmT62md/D/UUIy0EYwvP38H/4=
-sigs.k8s.io/cluster-api v1.3.3/go.mod h1:nnXmR51rHshpMEXmB4LZIwdiXWKXV6yaooB1KzrL0Qs=
+sigs.k8s.io/cluster-api v1.3.5 h1:Chg56Piv5ip0AFRN83H1I8uIn6qsdk+mr9hdq5Cxkf0=
+sigs.k8s.io/cluster-api v1.3.5/go.mod h1:9FNHNItE5c+klfDLNG3+ApSTX0H4yGAumdbFJMnk6Vc=
 sigs.k8s.io/controller-runtime v0.12.1-0.20220706151251-15154aaa6767 h1:AHbZSY3VleaCFQZJtysKbnOVCx5ztxbdJ2l9PqWnM7I=
 sigs.k8s.io/controller-runtime v0.12.1-0.20220706151251-15154aaa6767/go.mod h1:+EYcTnwWLy6mrPSEM/jcJVthXXlaMIx6KRQBzEt12Rw=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
