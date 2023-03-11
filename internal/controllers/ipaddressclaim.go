@@ -160,17 +160,33 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.
 		return ctrl.Result{}, nil
 	}
 
-	log = log.WithValues("pool name", pool.GetName())
+	log = log.WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
 	address := poolutil.AddressByName(addressesInUse, claim.Name)
 	if address == nil {
 		var err error
-		address, err = r.allocateAddress(ctx, claim, pool, addressesInUse)
+		address, err = r.allocateAddress(claim, pool, addressesInUse)
 		if err != nil {
-			log.Error(err, "failed to allocate address")
-			return ctrl.Result{}, err
+			return ctrl.Result{}, errors.Wrap(err, "failed to allocate address")
 		}
 	}
+
+	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, address, func() error {
+		if err := ipamutil.EnsureIPAddressOwnerReferences(r.Scheme, address, claim, pool); err != nil {
+			return errors.Wrap(err, "failed to ensure owner references on address")
+		}
+
+		_ = controllerutil.AddFinalizer(address, ProtectAddressFinalizer)
+
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to create or patch address")
+	}
+
+	log.Info(fmt.Sprintf("IPAddress %s/%s (%s) has been %s", address.Namespace, address.Name, address.Spec.Address, operationResult),
+		"IPAddressClaim", fmt.Sprintf("%s/%s", claim.Namespace, claim.Name))
+
 	if !address.DeletionTimestamp.IsZero() {
 		// We prevent deleting IPAddresses while their corresponding IPClaim still exists since we cannot guarantee that the IP
 		// wil remain the same when we recreate it.
@@ -202,7 +218,7 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *i
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
+func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
 	poolSpec := pool.PoolSpec()
 	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, poolSpec.Gateway)
 	if err != nil {
@@ -223,12 +239,6 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, claim *i
 	address.Spec.Address = freeIP.String()
 	address.Spec.Gateway = poolSpec.Gateway
 	address.Spec.Prefix = poolSpec.Prefix
-
-	controllerutil.AddFinalizer(&address, ProtectAddressFinalizer)
-
-	if err := r.Client.Create(ctx, &address); err != nil {
-		return nil, fmt.Errorf("failed to create IPAddress: %w", err)
-	}
 
 	return &address, nil
 }
