@@ -204,9 +204,10 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *i
 
 func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
 	poolSpec := pool.PoolSpec()
-	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, poolSpec.Gateway)
+
+	inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse, poolSpec.Gateway))
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert IPAddressList to set: %w", err)
+		return nil, fmt.Errorf("failed to convert IPAddressList to IPSet: %w", err)
 	}
 
 	poolIPSet, err := poolutil.IPPoolSpecToIPSet(pool.PoolSpec())
@@ -231,4 +232,18 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, claim *i
 	}
 
 	return &address, nil
+}
+
+func buildAddressList(addressesInUse []ipamv1.IPAddress, gateway string) []string {
+	// Add extra capacity for the case that the pool's gateway is specified
+	addrStrings := make([]string, len(addressesInUse), len(addressesInUse)+1)
+	for i, address := range addressesInUse {
+		addrStrings[i] = address.Spec.Address
+	}
+
+	if gateway != "" {
+		addrStrings = append(addrStrings, gateway)
+	}
+
+	return addrStrings
 }
