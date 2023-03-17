@@ -3,6 +3,7 @@ package poolutil
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"inet.af/netaddr"
 )
 
@@ -163,3 +164,184 @@ var _ = Describe("FindFreeAddress", func() {
 		})
 	})
 })
+
+var _ = Describe("AddressStrParses", func() {
+	It("returns true for valid address strings", func() {
+		Expect(AddressStrParses("192.168.1.2")).To(BeTrue())
+		Expect(AddressStrParses("192.168.1.2-192.168.1.4")).To(BeTrue())
+		Expect(AddressStrParses("192.168.1.2/24")).To(BeTrue())
+
+		Expect(AddressStrParses("fe80::1")).To(BeTrue())
+		Expect(AddressStrParses("fe80::1-fe80::3")).To(BeTrue())
+		Expect(AddressStrParses("fe80::1/64")).To(BeTrue())
+	})
+
+	It("returns false for invalid address strings", func() {
+		Expect(AddressStrParses("192.168.1.2.4")).To(BeFalse())
+		Expect(AddressStrParses("192.168.1.4-192.168.1.1")).To(BeFalse())
+		Expect(AddressStrParses("192.168.1.2/33")).To(BeFalse())
+
+		Expect(AddressStrParses("fe80::zzzz")).To(BeFalse())
+		Expect(AddressStrParses("fe80::3-fe80::1")).To(BeFalse())
+		Expect(AddressStrParses("fe80::1/129")).To(BeFalse())
+	})
+})
+
+var _ = Describe("IPPoolSpecToIPSet", func() {
+	Context("when the poolSpec has a list of addresses", func() {
+		It("parses pools with start/end", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				First: "192.168.1.2",
+				Last:  "192.168.1.4",
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.1.2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.5"))).To(BeFalse())
+		})
+
+		It("parses single IPs", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"192.168.1.2",
+					"192.168.1.3",
+				},
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.1.2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.4"))).To(BeFalse())
+		})
+
+		It("parses IP ranges with a dash", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"192.168.1.2-192.168.1.4",
+					"192.168.1.7-192.168.1.9",
+				},
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.1.2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.5"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.6"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.7"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.8"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.9"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.10"))).To(BeFalse())
+		})
+
+		It("parses IP CIDRs", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"192.168.1.8/29",
+					"192.168.1.100/30",
+				},
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.1.7"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.8"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.9"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.10"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.11"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.12"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.13"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.14"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.15"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.16"))).To(BeFalse())
+
+			Expect(ipSet.Contains(mustParse("192.168.1.99"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.100"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.101"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.102"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.103"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.104"))).To(BeFalse())
+		})
+
+		It("handles combinations of ranges, cidrs, and individual IPs", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"192.168.1.100/31",
+					"192.168.1.2-192.168.1.4",
+					"192.168.2.1",
+				},
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.1.99"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.100"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.101"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.102"))).To(BeFalse())
+
+			Expect(ipSet.Contains(mustParse("192.168.1.1"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.1.2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.1.5"))).To(BeFalse())
+
+			Expect(ipSet.Contains(mustParse("192.168.2.1"))).To(BeTrue())
+		})
+
+		It("handles combinations of IPv6 ranges, cidrs, and individual IPs", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"fe80::10/127",
+					"fe80::13-fe80::14",
+					"fe80::16",
+				},
+			}
+
+			ipSet, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("fe80::9"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("fe80::10"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fe80::11"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fe80::12"))).To(BeFalse())
+
+			Expect(ipSet.Contains(mustParse("fe80::12"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("fe80::13"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fe80::14"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fe80::15"))).To(BeFalse())
+
+			Expect(ipSet.Contains(mustParse("fe80::16"))).To(BeTrue())
+		})
+
+		It("returns and error when spec is invalid", func() {
+			poolSpec := &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.2-192.168.1.4-"}}
+			_, err := IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+			poolSpec = &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.2-192.168.1.4-192.168.1.9"}}
+			_, err = IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+			poolSpec = &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.4-192.168.1.2"}}
+			_, err = IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+			poolSpec = &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.4/21-192.168.1.2"}}
+			_, err = IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+			poolSpec = &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.4/-192.168.1.2"}}
+			_, err = IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+			poolSpec = &v1alpha1.InClusterIPPoolSpec{Addresses: []string{"192.168.1.4-192.168.1.2"}}
+			_, err = IPPoolSpecToIPSet(poolSpec)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})
+
+func mustParse(ipString string) netaddr.IP {
+	ip, err := netaddr.ParseIP(ipString)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return ip
+}

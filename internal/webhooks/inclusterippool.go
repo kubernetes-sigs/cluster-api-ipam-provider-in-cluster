@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 )
 
 func (webhook *InClusterIPPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -180,26 +181,78 @@ func validateAddresses(newPool *v1alpha1.InClusterIPPool) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "a valid prefix is required when using addresses"))
 	}
 
-	ips := make([]netaddr.IP, len(newPool.Spec.Addresses))
-	for i, address := range newPool.Spec.Addresses {
-		ip, err := netaddr.ParseIP(address)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address, "provided address is not a valid ip address"))
+	for _, address := range newPool.Spec.Addresses {
+		if !poolutil.AddressStrParses(address) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address, "provided address is not a valid IP, range, nor CIDR"))
 			continue
 		}
-		ips[i] = ip
 	}
 
-	prefix, err := netaddr.ParseIPPrefix(fmt.Sprintf("%s/%d", newPool.Spec.Addresses[0], newPool.Spec.Prefix))
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "provided prefix is not valid"))
-	} else {
-		for _, address := range ips {
-			if !prefix.Contains(address) {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address.String(), "provided address belongs to a different subnet than others"))
-			}
+	if len(allErrs) == 0 {
+		errs := validateAddressesAreWithinPrefix(newPool.Spec)
+		if len(errs) != 0 {
+			allErrs = append(allErrs, errs...)
 		}
 	}
 
 	return allErrs
+}
+
+func validatePrefix(spec v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, field.ErrorList) {
+	var errors field.ErrorList
+
+	addressesIPSet, err := poolutil.AddressesToIPSet(spec.Addresses)
+	if err != nil {
+		// this should not occur, previous validation should have caught problems here.
+		errors := append(errors, field.Invalid(field.NewPath("spec", "addresses"), spec.Addresses, err.Error()))
+		return &netaddr.IPSet{}, errors
+	}
+
+	firstIPInAddresses := addressesIPSet.Ranges()[0].From() // safe because of prior validation
+	prefix, err := netaddr.ParseIPPrefix(fmt.Sprintf("%s/%d", firstIPInAddresses, spec.Prefix))
+	if err != nil {
+		errors = append(errors, field.Invalid(field.NewPath("spec", "prefix"), spec.Prefix, "provided prefix is not valid"))
+		return &netaddr.IPSet{}, errors
+	}
+
+	builder := netaddr.IPSetBuilder{}
+	builder.AddPrefix(prefix)
+	prefixIPSet, err := builder.IPSet()
+	if err != nil {
+		// This should not occur, the prefix has been validated. Converting the prefix to an IPSet
+		// for it's ContainsRange function.
+		errors := append(errors, field.Invalid(field.NewPath("spec", "prefix"), spec.Prefix, err.Error()))
+		return &netaddr.IPSet{}, errors
+	}
+
+	return prefixIPSet, errors
+}
+
+func validateAddressesAreWithinPrefix(spec v1alpha1.InClusterIPPoolSpec) field.ErrorList {
+	var errors field.ErrorList
+
+	if len(spec.Addresses) == 0 {
+		return errors
+	}
+
+	prefixIPSet, prefixErrs := validatePrefix(spec)
+	if len(prefixErrs) > 0 {
+		return prefixErrs
+	}
+
+	for _, addressStr := range spec.Addresses {
+		addressIPSet, err := poolutil.AddressToIPSet(addressStr)
+		if err != nil {
+			// this should never occur, previous validations will have caught this.
+			errors = append(errors, field.Invalid(field.NewPath("spec", "addresses"), addressStr, "provided address is not a valid IP, range, nor CIDR"))
+			continue
+		}
+		// We know that each addressIPSet should be made up of only one range, it came from a single addressStr
+		if !prefixIPSet.ContainsRange(addressIPSet.Ranges()[0]) {
+			errors = append(errors, field.Invalid(field.NewPath("spec", "addresses"), addressStr, "provided address belongs to a different subnet than others"))
+			continue
+		}
+	}
+
+	return errors
 }

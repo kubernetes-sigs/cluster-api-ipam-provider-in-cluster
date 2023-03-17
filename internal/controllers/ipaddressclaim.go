@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"inet.af/netaddr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,15 +143,15 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.reconcileDelete(ctx, claim, address)
 	}
 
-	addresses, err := poolutil.ListAddresses(ctx, r.Client, claim.Namespace, claim.Spec.PoolRef)
+	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, claim.Namespace, claim.Spec.PoolRef)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
 	}
 
-	return r.reconcile(ctx, claim, pool, addresses)
+	return r.reconcile(ctx, claim, pool, addressesInUse)
 }
 
-func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAddressClaim, pool genericInClusterPool, addresses []ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	if pool == nil {
@@ -163,10 +162,10 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAd
 
 	log = log.WithValues("pool name", pool.GetName())
 
-	address := poolutil.AddressByName(addresses, c.Name)
+	address := poolutil.AddressByName(addressesInUse, claim.Name)
 	if address == nil {
 		var err error
-		address, err = r.allocateAddress(ctx, c, pool, addresses)
+		address, err = r.allocateAddress(ctx, claim, pool, addressesInUse)
 		if err != nil {
 			log.Error(err, "failed to allocate address")
 			return ctrl.Result{}, err
@@ -178,12 +177,12 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, c *ipamv1.IPAd
 		log.Info("Address is marked for deletion, but deletion is prevented until the claim is deleted as well.", "address", address.Name)
 	}
 
-	c.Status.AddressRef = corev1.LocalObjectReference{Name: address.Name}
+	claim.Status.AddressRef = corev1.LocalObjectReference{Name: address.Name}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv1.IPAddressClaim, address *ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim, address *ipamv1.IPAddress) (ctrl.Result, error) {
 	if address.Name != "" {
 		var err error
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
@@ -199,18 +198,18 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, c *ipamv
 		}
 	}
 
-	controllerutil.RemoveFinalizer(c, ReleaseAddressFinalizer)
+	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
+func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
 	poolSpec := pool.PoolSpec()
 	inUseIPSet, err := poolutil.IPAddressListToSet(addressesInUse, poolSpec.Gateway)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert IPAddressList to set: %w", err)
 	}
 
-	poolIPSet, err := ipPoolToIPSet(pool)
+	poolIPSet, err := poolutil.IPPoolSpecToIPSet(pool.PoolSpec())
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert pool to range: %w", err)
 	}
@@ -220,7 +219,7 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv
 		return nil, fmt.Errorf("failed to find free address: %w", err)
 	}
 
-	address := ipamutil.NewIPAddress(c, pool)
+	address := ipamutil.NewIPAddress(claim, pool)
 	address.Spec.Address = freeIP.String()
 	address.Spec.Gateway = poolSpec.Gateway
 	address.Spec.Prefix = poolSpec.Prefix
@@ -232,32 +231,4 @@ func (r *IPAddressClaimReconciler) allocateAddress(ctx context.Context, c *ipamv
 	}
 
 	return &address, nil
-}
-
-func ipPoolToIPSet(pool genericInClusterPool) (*netaddr.IPSet, error) {
-	builder := netaddr.IPSetBuilder{}
-
-	poolSpec := pool.PoolSpec()
-
-	if len(poolSpec.Addresses) > 0 {
-		for _, addressStr := range poolSpec.Addresses {
-			addr, err := netaddr.ParseIP(addressStr)
-			if err != nil {
-				return nil, err
-			}
-			builder.Add(addr)
-		}
-		return builder.IPSet()
-	}
-
-	start, err := netaddr.ParseIP(poolSpec.First)
-	if err != nil {
-		return nil, err
-	}
-	end, err := netaddr.ParseIP(poolSpec.Last)
-	if err != nil {
-		return nil, err
-	}
-	builder.AddRange(netaddr.IPRangeFrom(start, end))
-	return builder.IPSet()
 }
