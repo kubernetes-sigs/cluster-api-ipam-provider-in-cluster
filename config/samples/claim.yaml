@@ -1,9 +1,9 @@
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: ipam.cluster.x-k8s.io/v1alpha1
 kind: IPAddressClaim
 metadata:
-  name: another-claim
+  name: my-claim
 spec:
-  pool:
-    group: ipam.cluster.x-k8s.io
+  poolRef:
+    apiGroup: ipam.cluster.x-k8s.io
     kind: InClusterIPPool
     name: inclusterippool-sample
