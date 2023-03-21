@@ -128,7 +128,7 @@ func AddressToIPSet(addressStr string) (*netaddr.IPSet, error) {
 	return builder.IPSet()
 }
 
-// IPPoolSpecToIPSet converts poolSpec to a set of IP
+// IPPoolSpecToIPSet converts poolSpec to a set of IP.
 func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, error) {
 	if len(poolSpec.Addresses) > 0 {
 		return AddressesToIPSet(poolSpec.Addresses)
@@ -152,7 +152,7 @@ func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, 
 }
 
 // AddressStrParses checks to see that the addresss string is one of
-// a valid single IP address, a hyphonated IP range, or a Prefix
+// a valid single IP address, a hyphonated IP range, or a Prefix.
 func AddressStrParses(addressStr string) bool {
 	if strings.Contains(addressStr, "-") {
 		_, err := netaddr.ParseIPRange(addressStr)

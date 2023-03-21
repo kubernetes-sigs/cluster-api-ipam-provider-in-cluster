@@ -3,8 +3,9 @@ package poolutil
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"inet.af/netaddr"
+
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
 
 var _ = Describe("FindFreeAddress", func() {
