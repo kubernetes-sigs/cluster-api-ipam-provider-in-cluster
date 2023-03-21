@@ -22,8 +22,8 @@ kind: InClusterIPPool
 metadata:
   name: inclusterippool-sample
 spec:
-  first: 10.0.0.10
-  last: 10.10.0.42
+  start: 10.0.0.10
+  end: 10.10.0.42
   prefix: 24
   gateway: 10.0.0.1
 ```
