@@ -48,6 +48,7 @@ type InClusterIPPoolStatus struct {
 // +kubebuilder:printcolumn:name="Subnet",type="string",JSONPath=".spec.subnet",description="Subnet to allocate IPs from"
 // +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
 // +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
+// +kubebuilder:printcolumn:name="Addresses",type="string",JSONPath=".spec.addresses",description="List of addresses, within the subnet, to allocate from"
 
 // InClusterIPPool is the Schema for the inclusterippools API.
 type InClusterIPPool struct {

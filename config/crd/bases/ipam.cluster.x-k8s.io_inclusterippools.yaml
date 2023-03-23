@@ -29,6 +29,10 @@ spec:
       jsonPath: .spec.last
       name: Last
       type: string
+    - description: List of addresses, within the subnet, to allocate from
+      jsonPath: .spec.addresses
+      name: Addresses
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

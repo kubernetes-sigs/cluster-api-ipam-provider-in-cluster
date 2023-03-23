@@ -157,7 +157,7 @@ func TestInvalidScenarios(t *testing.T) {
 				Prefix:  24,
 				Gateway: "10.0.0.1",
 			},
-			expectedError: "provided address is not a valid ip address",
+			expectedError: "provided address is not a valid IP, range, nor CIDR",
 		},
 		{
 			testcase: "omitting a prefix should not be allowed",
@@ -181,6 +181,124 @@ func TestInvalidScenarios(t *testing.T) {
 				Gateway: "10.0.0.1",
 			},
 			expectedError: "provided prefix is not valid",
+		},
+		{
+			testcase: "address range is out of order",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.10-10.0.0.5",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address is not a valid IP, range, nor CIDR",
+		},
+		{
+			testcase: "CIDR address has invalid prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.10/33",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address is not a valid IP, range, nor CIDR",
+		},
+		{
+			testcase: "address range is below Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.10-10.0.0.20",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "address range is above Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.2.10-10.0.2.20",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "address range start is below Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.20-10.0.1.20",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "address range end is above Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.1.20-10.0.2.20",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "CIDR is below Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.1/24",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "CIDR is above Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.2.1/24",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "CIDR start is below Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.0/23",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
+		},
+		{
+			testcase: "CIDR end is above Prefix",
+			spec: v1alpha1.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.1.0/23",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided address belongs to a different subnet than others",
 		},
 	}
 	for _, tt := range tests {
