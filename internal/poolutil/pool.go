@@ -4,7 +4,6 @@ package poolutil
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"inet.af/netaddr"
@@ -46,26 +45,6 @@ func AddressByName(addresses []ipamv1.IPAddress, name string) *ipamv1.IPAddress 
 		}
 	}
 	return nil
-}
-
-// IPAddressListToSet converts a slice of ip address resources into a set.
-func IPAddressListToSet(list []ipamv1.IPAddress, gateway string) (*netaddr.IPSet, error) {
-	builder := netaddr.IPSetBuilder{}
-	for _, a := range list {
-		addr, err := netaddr.ParseIP(a.Spec.Address)
-		if err != nil {
-			return nil, err
-		}
-		builder.Add(addr)
-	}
-
-	gw, err := netaddr.ParseIP(gateway)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse gateway ip: %w", err)
-	}
-	builder.Add(gw)
-
-	return builder.IPSet()
 }
 
 // FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
@@ -154,16 +133,6 @@ func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, 
 // AddressStrParses checks to see that the addresss string is one of
 // a valid single IP address, a hyphonated IP range, or a Prefix.
 func AddressStrParses(addressStr string) bool {
-	if strings.Contains(addressStr, "-") {
-		_, err := netaddr.ParseIPRange(addressStr)
-		return err == nil
-	}
-
-	if strings.Contains(addressStr, "/") {
-		_, err := netaddr.ParseIPPrefix(addressStr)
-		return err == nil
-	}
-
-	_, err := netaddr.ParseIP(addressStr)
+	_, err := AddressToIPSet(addressStr)
 	return err == nil
 }

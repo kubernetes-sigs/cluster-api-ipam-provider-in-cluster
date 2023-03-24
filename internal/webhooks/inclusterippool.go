@@ -173,12 +173,15 @@ func validateAddresses(newPool *v1alpha1.InClusterIPPool) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "end"), newPool.Spec.Last, "end may not be used with addresses"))
 	}
 
-	if newPool.Spec.Gateway == "" {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, "gateway is required when using addresses"))
-	}
-
 	if newPool.Spec.Prefix == 0 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "a valid prefix is required when using addresses"))
+	}
+
+	if newPool.Spec.Gateway != "" {
+		_, err := netaddr.ParseIP(newPool.Spec.Gateway)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, err.Error()))
+		}
 	}
 
 	for _, address := range newPool.Spec.Addresses {

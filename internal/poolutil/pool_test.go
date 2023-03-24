@@ -8,6 +8,71 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
 
+var _ = Describe("AddressListToSet", func() {
+	It("converts the slice to an IPSet", func() {
+		addressSlice := []string{
+			"192.168.1.25",
+			"192.168.1.26-192.168.1.28",
+			"192.168.2.16/30",
+		}
+		ipSet, err := AddressesToIPSet(addressSlice)
+		Expect(err).NotTo(HaveOccurred())
+
+		ip, err := netaddr.ParseIP("192.168.1.25")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.1.26")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.1.27")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.1.28")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.1.29")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeFalse())
+
+		ip, err = netaddr.ParseIP("192.168.2.15")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeFalse())
+
+		ip, err = netaddr.ParseIP("192.168.2.16")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.2.17")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.2.18")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.2.19")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeTrue())
+
+		ip, err = netaddr.ParseIP("192.168.2.20")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ipSet.Contains(ip)).To(BeFalse())
+	})
+
+	It("errors on invalid addresses", func() {
+		addressSlice := []string{
+			"192.168.1.25",
+			"192.168.1.2612",
+		}
+		_, err := AddressesToIPSet(addressSlice)
+		Expect(err).To(HaveOccurred())
+	})
+})
+
 var _ = Describe("FindFreeAddress", func() {
 	var (
 		freeIPSet *netaddr.IPSet

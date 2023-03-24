@@ -121,7 +121,7 @@ func TestInvalidScenarios(t *testing.T) {
 			expectedError: "end may not be used with addresses",
 		},
 		{
-			testcase: "omitting the gateway should not be allowed",
+			testcase: "invalid gateway should not be allowed",
 			spec: v1alpha1.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
@@ -129,9 +129,9 @@ func TestInvalidScenarios(t *testing.T) {
 					"10.0.0.27",
 				},
 				Prefix:  24,
-				Gateway: "",
+				Gateway: "invalid",
 			},
-			expectedError: "gateway is required when using addresses",
+			expectedError: "spec.gateway: Invalid value: \"invalid\": ParseIP(\"invalid\"): unable to parse IP",
 		},
 		{
 			testcase: "specifying an address that belongs to separate subnets should not be allowed",
