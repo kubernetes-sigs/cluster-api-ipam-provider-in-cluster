@@ -142,8 +142,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, claim, address)
 	}
-
-	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, claim.Namespace, claim.Spec.PoolRef)
+	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, pool.GetNamespace(), claim.Spec.PoolRef)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
 	}
