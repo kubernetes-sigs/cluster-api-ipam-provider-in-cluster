@@ -18,14 +18,10 @@ const (
 
 // SetupIndexes adds indexes to the cache of a Manager.
 func SetupIndexes(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetCache().IndexField(ctx, &ipamv1.IPAddress{},
+	return mgr.GetCache().IndexField(ctx, &ipamv1.IPAddress{},
 		IPAddressPoolRefCombinedField,
 		ipAddressByCombinedPoolRef,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 func ipAddressByCombinedPoolRef(o client.Object) []string {

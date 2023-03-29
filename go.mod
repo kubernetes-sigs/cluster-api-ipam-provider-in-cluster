@@ -6,7 +6,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.8.4
 	github.com/onsi/gomega v1.27.2
 	github.com/pkg/errors v0.9.1
-	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
+	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
 	k8s.io/api v0.25.6
 	k8s.io/apimachinery v0.25.7
 	k8s.io/client-go v0.25.6
@@ -65,8 +65,6 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	go4.org/intern v0.0.0-20220617035311-6925f38cc365 // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.3.0 // indirect

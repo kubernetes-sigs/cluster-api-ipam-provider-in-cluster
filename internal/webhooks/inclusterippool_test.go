@@ -131,7 +131,7 @@ func TestInvalidScenarios(t *testing.T) {
 				Prefix:  24,
 				Gateway: "invalid",
 			},
-			expectedError: "spec.gateway: Invalid value: \"invalid\": ParseIP(\"invalid\"): unable to parse IP",
+			expectedError: "spec.gateway: Invalid value: \"invalid\": ParseAddr(\"invalid\"): unable to parse IP",
 		},
 		{
 			testcase: "specifying an address that belongs to separate subnets should not be allowed",

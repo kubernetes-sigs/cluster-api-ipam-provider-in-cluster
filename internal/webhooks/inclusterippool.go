@@ -3,8 +3,9 @@ package webhooks
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
-	"inet.af/netaddr"
+	"go4.org/netipx"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -36,7 +37,7 @@ var _ webhook.CustomDefaulter = &InClusterIPPool{}
 var _ webhook.CustomValidator = &InClusterIPPool{}
 
 // Default satisfies the defaulting webhook interface.
-func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) Default(_ context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
@@ -47,14 +48,14 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 	}
 
 	if pool.Spec.Subnet == "" {
-		first, err := netaddr.ParseIP(pool.Spec.First)
+		first, err := netip.ParseAddr(pool.Spec.First)
 		if err != nil {
 			return apierrors.NewInvalid(v1alpha1.GroupVersion.WithKind("InClusterIPPool").GroupKind(), pool.Name, field.ErrorList{
 				field.Invalid(field.NewPath("spec", "subnet"), pool.Spec.Subnet, err.Error()),
 			})
 		}
 
-		prefix, err := first.Prefix(uint8(pool.Spec.Prefix))
+		prefix, err := first.Prefix(pool.Spec.Prefix)
 		if err != nil {
 			return apierrors.NewInvalid(v1alpha1.GroupVersion.WithKind("InClusterIPPool").GroupKind(), pool.Name, field.ErrorList{
 				field.Invalid(field.NewPath("spec", "prefix"), pool.Spec.Prefix, err.Error()),
@@ -63,21 +64,22 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 
 		pool.Spec.Subnet = prefix.String()
 	} else {
-		prefix, err := netaddr.ParseIPPrefix(pool.Spec.Subnet)
+		prefix, err := netip.ParsePrefix(pool.Spec.Subnet)
 		if err != nil {
 			return apierrors.NewInvalid(v1alpha1.GroupVersion.WithKind("InClusterIPPool").GroupKind(), pool.Name, field.ErrorList{
 				field.Invalid(field.NewPath("spec", "subnet"), pool.Spec.Subnet, err.Error()),
 			})
 		}
 
+		prefixRange := netipx.RangeOfPrefix(prefix)
 		if pool.Spec.First == "" {
-			pool.Spec.First = prefix.Range().From().Next().String() // omits the first address, the assumed gateway
+			pool.Spec.First = prefixRange.From().Next().String() // omits the first address, the assumed gateway
 		}
 		if pool.Spec.Last == "" {
-			pool.Spec.Last = prefix.Range().To().Prior().String() // omits the last address, the assumed broadcast
+			pool.Spec.Last = prefixRange.To().Prev().String() // omits the last address, the assumed broadcast
 		}
 		if pool.Spec.Prefix == 0 {
-			pool.Spec.Prefix = int(prefix.Bits())
+			pool.Spec.Prefix = prefix.Bits()
 		}
 	}
 
@@ -85,7 +87,7 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
@@ -94,7 +96,7 @@ func (webhook *InClusterIPPool) ValidateCreate(ctx context.Context, obj runtime.
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) error {
 	newPool, ok := newObj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", newObj))
@@ -107,7 +109,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateDelete(_ context.Context, obj runtime.Object) (reterr error) {
+func (webhook *InClusterIPPool) ValidateDelete(_ context.Context, _ runtime.Object) (reterr error) {
 	return nil
 }
 
@@ -124,32 +126,32 @@ func (webhook *InClusterIPPool) validate(_, newPool *v1alpha1.InClusterIPPool) (
 		return
 	}
 
-	prefix, err := netaddr.ParseIPPrefix(newPool.Spec.Subnet)
+	prefix, err := netip.ParsePrefix(newPool.Spec.Subnet)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet"), newPool.Spec.Subnet, err.Error()))
 		return
 	}
 
-	first, err := netaddr.ParseIP(newPool.Spec.First)
+	first, err := netip.ParseAddr(newPool.Spec.First)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, err.Error()))
 	} else if !prefix.Contains(first) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "first"), newPool.Spec.First, "address is not part of spec.subnet"))
 	}
 
-	last, err := netaddr.ParseIP(newPool.Spec.Last)
+	last, err := netip.ParseAddr(newPool.Spec.Last)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, err.Error()))
 	} else if !prefix.Contains(last) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "last"), newPool.Spec.Last, "address is not part of spec.subnet"))
 	}
 
-	if prefix.Bits() != uint8(newPool.Spec.Prefix) {
+	if prefix.Bits() != newPool.Spec.Prefix {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.Spec.Prefix, "does not match prefix of spec.subnet"))
 	}
 
 	if newPool.Spec.Gateway != "" {
-		_, err := netaddr.ParseIP(newPool.Spec.Gateway)
+		_, err := netip.ParseAddr(newPool.Spec.Gateway)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, err.Error()))
 		}
@@ -178,7 +180,7 @@ func validateAddresses(newPool *v1alpha1.InClusterIPPool) field.ErrorList {
 	}
 
 	if newPool.Spec.Gateway != "" {
-		_, err := netaddr.ParseIP(newPool.Spec.Gateway)
+		_, err := netip.ParseAddr(newPool.Spec.Gateway)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.Spec.Gateway, err.Error()))
 		}
@@ -201,31 +203,31 @@ func validateAddresses(newPool *v1alpha1.InClusterIPPool) field.ErrorList {
 	return allErrs
 }
 
-func validatePrefix(spec v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, field.ErrorList) {
+func validatePrefix(spec v1alpha1.InClusterIPPoolSpec) (*netipx.IPSet, field.ErrorList) {
 	var errors field.ErrorList
 
 	addressesIPSet, err := poolutil.AddressesToIPSet(spec.Addresses)
 	if err != nil {
 		// this should not occur, previous validation should have caught problems here.
 		errors := append(errors, field.Invalid(field.NewPath("spec", "addresses"), spec.Addresses, err.Error()))
-		return &netaddr.IPSet{}, errors
+		return &netipx.IPSet{}, errors
 	}
 
 	firstIPInAddresses := addressesIPSet.Ranges()[0].From() // safe because of prior validation
-	prefix, err := netaddr.ParseIPPrefix(fmt.Sprintf("%s/%d", firstIPInAddresses, spec.Prefix))
+	prefix, err := netip.ParsePrefix(fmt.Sprintf("%s/%d", firstIPInAddresses, spec.Prefix))
 	if err != nil {
 		errors = append(errors, field.Invalid(field.NewPath("spec", "prefix"), spec.Prefix, "provided prefix is not valid"))
-		return &netaddr.IPSet{}, errors
+		return &netipx.IPSet{}, errors
 	}
 
-	builder := netaddr.IPSetBuilder{}
+	builder := netipx.IPSetBuilder{}
 	builder.AddPrefix(prefix)
 	prefixIPSet, err := builder.IPSet()
 	if err != nil {
 		// This should not occur, the prefix has been validated. Converting the prefix to an IPSet
 		// for it's ContainsRange function.
 		errors := append(errors, field.Invalid(field.NewPath("spec", "prefix"), spec.Prefix, err.Error()))
-		return &netaddr.IPSet{}, errors
+		return &netipx.IPSet{}, errors
 	}
 
 	return prefixIPSet, errors
