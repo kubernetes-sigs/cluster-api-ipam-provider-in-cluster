@@ -4,9 +4,10 @@ package poolutil
 import (
 	"context"
 	"errors"
+	"net/netip"
 	"strings"
 
-	"inet.af/netaddr"
+	"go4.org/netipx"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
@@ -48,7 +49,7 @@ func AddressByName(addresses []ipamv1.IPAddress, name string) *ipamv1.IPAddress 
 }
 
 // FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
-func FindFreeAddress(poolIPSet *netaddr.IPSet, inUseIPSet *netaddr.IPSet) (netaddr.IP, error) {
+func FindFreeAddress(poolIPSet *netipx.IPSet, inUseIPSet *netipx.IPSet) (netip.Addr, error) {
 	for _, iprange := range poolIPSet.Ranges() {
 		ip := iprange.From()
 		for {
@@ -61,14 +62,14 @@ func FindFreeAddress(poolIPSet *netaddr.IPSet, inUseIPSet *netaddr.IPSet) (netad
 			ip = ip.Next()
 		}
 	}
-	return netaddr.IP{}, errors.New("no address available")
+	return netip.Addr{}, errors.New("no address available")
 }
 
 // AddressesToIPSet converts an array of addresses to an AddressesToIPSet
 // addresses may be specified as individual IPs, CIDR ranges, or hyphenated IP
 // ranges.
-func AddressesToIPSet(addresses []string) (*netaddr.IPSet, error) {
-	builder := &netaddr.IPSetBuilder{}
+func AddressesToIPSet(addresses []string) (*netipx.IPSet, error) {
+	builder := &netipx.IPSetBuilder{}
 	for _, addressStr := range addresses {
 		ipSet, err := AddressToIPSet(addressStr)
 		if err != nil {
@@ -81,23 +82,23 @@ func AddressesToIPSet(addresses []string) (*netaddr.IPSet, error) {
 
 // AddressToIPSet converts an addresses to an AddressesToIPSet addresses may be
 // specified as individual IPs, CIDR ranges, or hyphenated IP ranges.
-func AddressToIPSet(addressStr string) (*netaddr.IPSet, error) {
-	builder := &netaddr.IPSetBuilder{}
+func AddressToIPSet(addressStr string) (*netipx.IPSet, error) {
+	builder := &netipx.IPSetBuilder{}
 
 	if strings.Contains(addressStr, "-") {
-		addrRange, err := netaddr.ParseIPRange(addressStr)
+		addrRange, err := netipx.ParseIPRange(addressStr)
 		if err != nil {
 			return nil, err
 		}
 		builder.AddRange(addrRange)
 	} else if strings.Contains(addressStr, "/") {
-		prefix, err := netaddr.ParseIPPrefix(addressStr)
+		prefix, err := netip.ParsePrefix(addressStr)
 		if err != nil {
 			return nil, err
 		}
 		builder.AddPrefix(prefix)
 	} else {
-		addr, err := netaddr.ParseIP(addressStr)
+		addr, err := netip.ParseAddr(addressStr)
 		if err != nil {
 			return nil, err
 		}
@@ -108,24 +109,24 @@ func AddressToIPSet(addressStr string) (*netaddr.IPSet, error) {
 }
 
 // IPPoolSpecToIPSet converts poolSpec to a set of IP.
-func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netaddr.IPSet, error) {
+func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netipx.IPSet, error) {
 	if len(poolSpec.Addresses) > 0 {
 		return AddressesToIPSet(poolSpec.Addresses)
 	}
 
-	builder := &netaddr.IPSetBuilder{}
+	builder := &netipx.IPSetBuilder{}
 
-	start, err := netaddr.ParseIP(poolSpec.First)
+	start, err := netip.ParseAddr(poolSpec.First)
 	if err != nil {
 		return nil, err
 	}
 
-	end, err := netaddr.ParseIP(poolSpec.Last)
+	end, err := netip.ParseAddr(poolSpec.Last)
 	if err != nil {
 		return nil, err
 	}
 
-	builder.AddRange(netaddr.IPRangeFrom(start, end))
+	builder.AddRange(netipx.IPRangeFrom(start, end))
 
 	return builder.IPSet()
 }

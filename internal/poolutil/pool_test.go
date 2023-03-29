@@ -1,9 +1,11 @@
 package poolutil
 
 import (
+	"net/netip"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"inet.af/netaddr"
+	"go4.org/netipx"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
@@ -18,47 +20,47 @@ var _ = Describe("AddressListToSet", func() {
 		ipSet, err := AddressesToIPSet(addressSlice)
 		Expect(err).NotTo(HaveOccurred())
 
-		ip, err := netaddr.ParseIP("192.168.1.25")
+		ip, err := netip.ParseAddr("192.168.1.25")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.1.26")
+		ip, err = netip.ParseAddr("192.168.1.26")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.1.27")
+		ip, err = netip.ParseAddr("192.168.1.27")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.1.28")
+		ip, err = netip.ParseAddr("192.168.1.28")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.1.29")
+		ip, err = netip.ParseAddr("192.168.1.29")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeFalse())
 
-		ip, err = netaddr.ParseIP("192.168.2.15")
+		ip, err = netip.ParseAddr("192.168.2.15")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeFalse())
 
-		ip, err = netaddr.ParseIP("192.168.2.16")
+		ip, err = netip.ParseAddr("192.168.2.16")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.2.17")
+		ip, err = netip.ParseAddr("192.168.2.17")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.2.18")
+		ip, err = netip.ParseAddr("192.168.2.18")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.2.19")
+		ip, err = netip.ParseAddr("192.168.2.19")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeTrue())
 
-		ip, err = netaddr.ParseIP("192.168.2.20")
+		ip, err = netip.ParseAddr("192.168.2.20")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ipSet.Contains(ip)).To(BeFalse())
 	})
@@ -75,8 +77,8 @@ var _ = Describe("AddressListToSet", func() {
 
 var _ = Describe("FindFreeAddress", func() {
 	var (
-		freeIPSet *netaddr.IPSet
-		existing  *netaddr.IPSet
+		freeIPSet *netipx.IPSet
+		existing  *netipx.IPSet
 	)
 
 	type iprange struct {
@@ -84,16 +86,16 @@ var _ = Describe("FindFreeAddress", func() {
 		To   string
 	}
 
-	createIPSet := func(ipranges []iprange) *netaddr.IPSet {
-		builder := netaddr.IPSetBuilder{}
+	createIPSet := func(ipranges []iprange) *netipx.IPSet {
+		builder := netipx.IPSetBuilder{}
 		for _, r := range ipranges {
-			first, err := netaddr.ParseIP(r.From)
+			first, err := netip.ParseAddr(r.From)
 			Expect(err).NotTo(HaveOccurred())
 
-			second, err := netaddr.ParseIP(r.To)
+			second, err := netip.ParseAddr(r.To)
 			Expect(err).NotTo(HaveOccurred())
 
-			builder.AddRange(netaddr.IPRangeFrom(first, second))
+			builder.AddRange(netipx.IPRangeFrom(first, second))
 		}
 
 		ipSet, err := builder.IPSet()
@@ -106,7 +108,7 @@ var _ = Describe("FindFreeAddress", func() {
 		freeIPSet = nil
 
 		var err error
-		existingIPSetBuilder := netaddr.IPSetBuilder{}
+		existingIPSetBuilder := netipx.IPSetBuilder{}
 		existing, err = existingIPSetBuilder.IPSet()
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -406,8 +408,8 @@ var _ = Describe("IPPoolSpecToIPSet", func() {
 	})
 })
 
-func mustParse(ipString string) netaddr.IP {
-	ip, err := netaddr.ParseIP(ipString)
+func mustParse(ipString string) netip.Addr {
+	ip, err := netip.ParseAddr(ipString)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return ip
 }
