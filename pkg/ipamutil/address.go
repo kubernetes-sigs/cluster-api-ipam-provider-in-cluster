@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// NewIPAddress creates a new ipamv1.IPAddress with references to a pool and claim.
-func NewIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAddress {
+// newIPAddress creates a new ipamv1.IPAddress with references to a pool and claim.
+func newIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAddress {
 	poolGVK := pool.GetObjectKind().GroupVersionKind()
 
 	return ipamv1.IPAddress{
@@ -34,9 +34,9 @@ func NewIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAdd
 	}
 }
 
-// EnsureIPAddressOwnerReferences ensures that an IPAddress has the
+// ensureIPAddressOwnerReferences ensures that an IPAddress has the
 // IPAddressClaim and IPPool as an OwnerReference.
-func EnsureIPAddressOwnerReferences(scheme *runtime.Scheme, address *ipamv1.IPAddress, claim *ipamv1.IPAddressClaim, pool client.Object) error {
+func ensureIPAddressOwnerReferences(scheme *runtime.Scheme, address *ipamv1.IPAddress, claim *ipamv1.IPAddressClaim, pool client.Object) error {
 	if err := controllerutil.SetControllerReference(claim, address, scheme); err != nil {
 		if _, ok := err.(*controllerutil.AlreadyOwnedError); !ok {
 			return errors.Wrap(err, "Failed to update address's claim owner reference")

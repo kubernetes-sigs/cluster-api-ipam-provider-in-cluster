@@ -36,6 +36,7 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/controllers"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/webhooks"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
 )
 
 var (
@@ -94,9 +95,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.IPAddressClaimReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&ipamutil.ClaimReconciler{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		WatchFilterValue: watchFilter,
+		Provider: &controllers.InClusterProviderIntegration{
+			Client:           mgr.GetClient(),
+			WatchFilterValue: watchFilter,
+		},
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAddressClaim")
 		os.Exit(1)

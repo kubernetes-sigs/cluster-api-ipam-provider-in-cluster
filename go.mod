@@ -7,6 +7,7 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/pkg/errors v0.9.1
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1

@@ -21,6 +21,7 @@ import (
 	//+kubebuilder:scaffold:imports
 	v1alpha1 "github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -78,9 +79,10 @@ var _ = BeforeSuite(func() {
 	Expect(index.SetupIndexes(ctx, mgr)).To(Succeed())
 
 	Expect(
-		(&IPAddressClaimReconciler{
-			Client: mgr.GetClient(),
-			Scheme: mgr.GetScheme(),
+		(&ipamutil.ClaimReconciler{
+			Client:   mgr.GetClient(),
+			Scheme:   mgr.GetScheme(),
+			Provider: &InClusterProviderIntegration{},
 		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 
