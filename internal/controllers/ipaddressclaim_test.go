@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"time"
+z	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -119,7 +119,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -234,7 +234,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -416,7 +416,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -491,7 +491,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -528,7 +528,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-second-namespace",
 						Namespace:  secondNamespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -708,7 +708,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-1",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -745,7 +745,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-2",
 						Namespace:  secondNamespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -837,7 +837,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-1",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -874,7 +874,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-2",
 						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
+						Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -1088,7 +1088,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
-					Finalizers: []string{ProtectAddressFinalizer},
+					Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -1178,7 +1178,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
-					Finalizers: []string{ProtectAddressFinalizer},
+					Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion: "alpha-dummy",
@@ -1245,7 +1245,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
-					Finalizers: []string{ProtectAddressFinalizer},
+					Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -1282,7 +1282,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace2,
-					Finalizers: []string{ProtectAddressFinalizer},
+					Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
@@ -1675,7 +1675,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
-					Finalizers: []string{ProtectAddressFinalizer},
+					Finalizers: []string{ipamutil.ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
