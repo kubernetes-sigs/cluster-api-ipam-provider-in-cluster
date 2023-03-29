@@ -37,7 +37,7 @@ var _ webhook.CustomDefaulter = &InClusterIPPool{}
 var _ webhook.CustomValidator = &InClusterIPPool{}
 
 // Default satisfies the defaulting webhook interface.
-func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) Default(_ context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
@@ -79,7 +79,7 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 			pool.Spec.Last = prefixRange.To().Prev().String() // omits the last address, the assumed broadcast
 		}
 		if pool.Spec.Prefix == 0 {
-			pool.Spec.Prefix = int(prefix.Bits())
+			pool.Spec.Prefix = prefix.Bits()
 		}
 	}
 
@@ -87,7 +87,7 @@ func (webhook *InClusterIPPool) Default(ctx context.Context, obj runtime.Object)
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", obj))
@@ -96,7 +96,7 @@ func (webhook *InClusterIPPool) ValidateCreate(ctx context.Context, obj runtime.
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) error {
 	newPool, ok := newObj.(*v1alpha1.InClusterIPPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool but got a %T", newObj))
@@ -109,7 +109,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateDelete(_ context.Context, obj runtime.Object) (reterr error) {
+func (webhook *InClusterIPPool) ValidateDelete(_ context.Context, _ runtime.Object) (reterr error) {
 	return nil
 }
 
