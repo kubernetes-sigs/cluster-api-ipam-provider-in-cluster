@@ -28,6 +28,28 @@ webhooks:
     resources:
     - inclusterippools
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-ipam-cluster-x-k8s-io-v1alpha1-globalinclusterippool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.globalinclusterippool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - globalinclusterippools
+  sideEffects: None
 
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -57,4 +79,26 @@ webhooks:
     - UPDATE
     resources:
     - inclusterippools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ipam-cluster-x-k8s-io-v1alpha1-globalinclusterippool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.globalinclusterippool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - globalinclusterippools
   sideEffects: None

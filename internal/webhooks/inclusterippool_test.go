@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
 func TestInClusterIPPoolDefaulting(t *testing.T) {
@@ -69,21 +70,28 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
+		namespacedPool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
+		globalPool := &v1alpha1.GlobalInClusterIPPool{Spec: tt.spec}
 		webhook := InClusterIPPool{}
-		t.Run(tt.name, customDefaultValidateTest(ctx, pool.DeepCopyObject(), &webhook))
 
-		g.Expect(webhook.Default(ctx, pool)).To(Succeed())
-		g.Expect(pool.Spec).To(Equal(tt.expect))
+		t.Run(tt.name, customDefaultValidateTest(ctx, namespacedPool.DeepCopyObject(), &webhook))
+		g.Expect(webhook.Default(ctx, namespacedPool)).To(Succeed())
+		g.Expect(namespacedPool.Spec).To(Equal(tt.expect))
+
+		t.Run(tt.name, customDefaultValidateTest(ctx, globalPool.DeepCopyObject(), &webhook))
+		g.Expect(webhook.Default(ctx, globalPool)).To(Succeed())
+		g.Expect(globalPool.Spec).To(Equal(tt.expect))
 	}
 }
 
+type invalidScenarioTest struct {
+	testcase      string
+	spec          v1alpha1.InClusterIPPoolSpec
+	expectedError string
+}
+
 func TestInvalidScenarios(t *testing.T) {
-	tests := []struct {
-		testcase      string
-		spec          v1alpha1.InClusterIPPoolSpec
-		expectedError string
-	}{
+	tests := []invalidScenarioTest{
 		{
 			testcase: "specifying addresses and subnet should not allow subnet",
 			spec: v1alpha1.InClusterIPPoolSpec{
@@ -302,32 +310,39 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		pool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
+		namespacedPool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
+		globalPool := &v1alpha1.GlobalInClusterIPPool{Spec: tt.spec}
 		webhook := InClusterIPPool{}
-		t.Run(tt.testcase, func(t *testing.T) {
-			t.Run("create", func(t *testing.T) {
-				t.Helper()
-
-				g := NewWithT(t)
-				g.Expect(testCreate(context.Background(), pool, &webhook)).
-					To(MatchError(ContainSubstring(tt.expectedError)))
-			})
-			t.Run("update", func(t *testing.T) {
-				t.Helper()
-
-				g := NewWithT(t)
-				g.Expect(testUpdate(context.Background(), pool, &webhook)).
-					To(MatchError(ContainSubstring(tt.expectedError)))
-			})
-			t.Run("delete", func(t *testing.T) {
-				t.Helper()
-
-				g := NewWithT(t)
-				g.Expect(testDelete(context.Background(), pool, &webhook)).
-					To(Succeed())
-			})
-		})
+		runInvalidScenarioTests(t, tt, namespacedPool, webhook)
+		runInvalidScenarioTests(t, tt, globalPool, webhook)
 	}
+}
+
+func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.GenericInClusterPool, webhook InClusterIPPool) {
+	t.Helper()
+	t.Run(tt.testcase, func(t *testing.T) {
+		t.Run("create", func(t *testing.T) {
+			t.Helper()
+
+			g := NewWithT(t)
+			g.Expect(testCreate(context.Background(), pool, &webhook)).
+				To(MatchError(ContainSubstring(tt.expectedError)))
+		})
+		t.Run("update", func(t *testing.T) {
+			t.Helper()
+
+			g := NewWithT(t)
+			g.Expect(testUpdate(context.Background(), pool, &webhook)).
+				To(MatchError(ContainSubstring(tt.expectedError)))
+		})
+		t.Run("delete", func(t *testing.T) {
+			t.Helper()
+
+			g := NewWithT(t)
+			g.Expect(testDelete(context.Background(), pool, &webhook)).
+				To(Succeed())
+		})
+	})
 }
 
 func testCreate(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) error {

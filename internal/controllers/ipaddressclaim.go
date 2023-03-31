@@ -25,6 +25,7 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
 	ipampredicates "github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/predicates"
+	pooltypes "github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
 const (
@@ -34,11 +35,6 @@ const (
 	// ProtectAddressFinalizer is used to prevent deletion of an IPAddress object while its claim is not deleted.
 	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
 )
-
-type genericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha1.InClusterIPPoolSpec
-}
 
 // IPAddressClaimReconciler reconciles a InClusterIPPool object.
 type IPAddressClaimReconciler struct {
@@ -114,7 +110,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	var pool genericInClusterPool
+	var pool pooltypes.GenericInClusterPool
 
 	if claim.Spec.PoolRef.Kind == "InClusterIPPool" {
 		icippool := &v1alpha1.InClusterIPPool{}
@@ -150,7 +146,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcile(ctx, claim, pool, addressesInUse)
 }
 
-func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	if pool == nil {
@@ -217,7 +213,7 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *i
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim, pool genericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
+func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
 	poolSpec := pool.PoolSpec()
 
 	inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse, poolSpec.Gateway))
