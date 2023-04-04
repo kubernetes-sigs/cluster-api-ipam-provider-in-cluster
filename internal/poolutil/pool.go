@@ -23,7 +23,7 @@ func ListAddressesInUse(ctx context.Context, c client.Client, namespace string, 
 	addresses := &ipamv1.IPAddressList{}
 	err := c.List(ctx, addresses,
 		client.MatchingFields{
-			index.IPAddressPoolRefCombinedField: index.IPAddressPoolRefValue(poolRef),
+			index.IPAddressPoolRefCombinedField: index.IPPoolRefValue(poolRef),
 		},
 		client.InNamespace(namespace),
 	)
