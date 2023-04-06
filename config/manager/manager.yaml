@@ -31,8 +31,6 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
-        securityContext:
-          allowPrivilegeEscalation: false
         livenessProbe:
           httpGet:
             path: /healthz
@@ -54,5 +52,16 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsUser: 65532
+          runAsGroup: 65532
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
