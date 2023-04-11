@@ -10,14 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/komega"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	//+kubebuilder:scaffold:imports
 	v1alpha1 "github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
@@ -41,7 +40,8 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	klog.SetOutput(GinkgoWriter)
+	ctrl.SetLogger(klog.Background())
 
 	ctx, cancelCtx = context.WithCancel(ctrl.SetupSignalHandler())
 
@@ -79,6 +79,20 @@ var _ = BeforeSuite(func() {
 
 	Expect(
 		(&IPAddressClaimReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(ctx, mgr),
+	).To(Succeed())
+
+	Expect(
+		(&InClusterIPPoolReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(ctx, mgr),
+	).To(Succeed())
+
+	Expect(
+		(&GlobalInClusterIPPoolReconciler{
 			Client: mgr.GetClient(),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(ctx, mgr),

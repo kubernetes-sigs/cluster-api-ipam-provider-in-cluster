@@ -11,6 +11,7 @@ import (
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"sigs.k8s.io/cluster-api/util/patch"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
@@ -102,8 +103,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(poolName, namespace)
 				deleteClaim("test", namespace)
+				deleteNamespacedPool(poolName, namespace)
 			})
 
 			It("should allocate an Address from the Pool", func() {
@@ -197,8 +198,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(poolName, namespace)
 				deleteClaim("test", namespace)
+				deleteNamespacedPool(poolName, namespace)
 			})
 
 			It("should allocate the lowest available Address from the Pool, regardless of Addresses order", func() {
@@ -290,8 +291,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(poolName, namespace)
 				deleteClaim("test", namespace)
+				deleteNamespacedPool(poolName, namespace)
 			})
 
 			It("should allocate an Address from the Pool", func() {
@@ -382,9 +383,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteClusterScopedPool(poolName)
 				deleteClaim("test", namespace)
 				deleteClaim("test-second-namespace", secondNamespace)
+				deleteClusterScopedPool(poolName)
 			})
 
 			It("should allocate an Address from the Pool, no matter the claim's namespace", func() {
@@ -542,9 +543,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(poolName, namespace)
 				deleteClaim(claim1.Name, claim1.Namespace)
 				deleteClaim(claim2.Name, claim2.Namespace)
+				deleteNamespacedPool(poolName, namespace)
 			})
 
 			It("should allocate an Address from the Pool", func() {
@@ -711,10 +712,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(commonPoolName, namespace)
-				deleteNamespacedPool(commonPoolName, secondNamespace)
 				deleteClaim(claim1.Name, claim1.Namespace)
 				deleteClaim(claim2.Name, claim2.Namespace)
+				deleteNamespacedPool(commonPoolName, namespace)
+				deleteNamespacedPool(commonPoolName, secondNamespace)
 			})
 
 			It("should allocate Addresses from each Pool independently", func() {
@@ -878,10 +879,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			AfterEach(func() {
-				deleteNamespacedPool(commonPoolName, namespace)
-				deleteClusterScopedPool(commonPoolName)
 				deleteClaim(claimFromNamespacedPool.Name, claimFromNamespacedPool.Namespace)
 				deleteClaim(claimFromGlobalPool.Name, claimFromGlobalPool.Namespace)
+				deleteNamespacedPool(commonPoolName, namespace)
+				deleteClusterScopedPool(commonPoolName)
 			})
 
 			It("should allocate Addresses from each Pool independently", func() {
@@ -1035,8 +1036,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				})
 
 				AfterEach(func() {
-					deleteNamespacedPool(poolName, namespace)
 					deleteClaim("paused-pool-test", namespace)
+					deleteNamespacedPool(poolName, namespace)
 				})
 
 				It("should not create an IPAddress for claims until the pool is unpaused", func() {
@@ -1061,14 +1062,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(0)))
 
+					patchHelper, err := patch.NewHelper(&pool, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
 					delete(pool.Annotations, clusterv1.PausedAnnotation)
-					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+					err = patchHelper.Patch(ctx, &pool)
+					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(ObjectList(&addresses)).
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 				})
-
 			})
 
 			When("a claim is deleted", func() {
@@ -1117,10 +1120,14 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 
+					patchHelper, err := patch.NewHelper(&pool, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
 					pool.Annotations = map[string]string{
 						clusterv1.PausedAnnotation: "",
 					}
-					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+					err = patchHelper.Patch(ctx, &pool)
+					Expect(err).NotTo(HaveOccurred())
+
 					time.Sleep(1 * time.Second)
 
 					Expect(k8sClient.Delete(context.Background(), &claim)).To(Succeed())
@@ -1128,8 +1135,11 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 
+					patchHelper, err = patch.NewHelper(&pool, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
 					delete(pool.Annotations, clusterv1.PausedAnnotation)
-					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+					err = patchHelper.Patch(ctx, &pool)
+					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(ObjectList(&claims)).
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
@@ -1160,8 +1170,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		AfterEach(func() {
-			deleteNamespacedPool(poolName, namespace)
 			deleteClaim("test", namespace)
+			deleteNamespacedPool(poolName, namespace)
 		})
 
 		It("should add the owner references and finalizer", func() {
@@ -1264,8 +1274,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		AfterEach(func() {
-			deleteNamespacedPool(poolName, namespace)
 			deleteClaim("test", namespace)
+			deleteNamespacedPool(poolName, namespace)
 		})
 
 		It("should add the owner references and finalizer", func() {
@@ -1363,8 +1373,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 	Context("When the cluster is paused and the ipaddressclaim has the cluster-name label", func() {
 		const (
-			poolName    = "test-pool"
-			clusterName = "test-cluster"
+			poolName = "test-pool"
 		)
 
 		var (
@@ -1374,8 +1383,8 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		BeforeEach(func() {
 			cluster = clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      clusterName,
-					Namespace: namespace,
+					GenerateName: "test-cluster",
+					Namespace:    namespace,
 				},
 				Spec: clusterv1.ClusterSpec{
 					Paused: true,
@@ -1398,13 +1407,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
 			Eventually(Get(&pool)).Should(Succeed())
-
 		})
 
 		AfterEach(func() {
-			deleteCluster(clusterName, namespace)
-			deleteNamespacedPool(poolName, namespace)
 			deleteClaim("test", namespace)
+			deleteCluster(cluster.GetName(), namespace)
+			deleteNamespacedPool(poolName, namespace)
 		})
 
 		It("does not allocate an ipaddress for the claim until the cluster is unpaused", func() {
@@ -1413,7 +1421,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Name:      "test",
 					Namespace: namespace,
 					Labels: map[string]string{
-						clusterv1.ClusterNameLabel: clusterName,
+						clusterv1.ClusterNameLabel: cluster.GetName(),
 					},
 				},
 				Spec: ipamv1.IPAddressClaimSpec{
@@ -1508,12 +1516,11 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
 			Eventually(Get(&pool)).Should(Succeed())
-
 		})
 
 		AfterEach(func() {
-			deleteNamespacedPool(poolName, namespace)
 			deleteClaim("test", namespace)
+			deleteNamespacedPool(poolName, namespace)
 		})
 
 		It("does not allocate an ipaddress for the claim until the ip address claim is unpaused", func() {
@@ -1522,7 +1529,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Name:      "test",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						clusterv1.PausedAnnotation: "something",
+						clusterv1.PausedAnnotation: "",
 					},
 				},
 				Spec: ipamv1.IPAddressClaimSpec{
@@ -1542,8 +1549,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				HaveField("Items", HaveLen(0)))
 
 			// Unpause the IPAddressClaim
+			patchHelper, err := patch.NewHelper(&claim, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
 			delete(claim.Annotations, clusterv1.PausedAnnotation)
-			Expect(k8sClient.Update(context.Background(), &claim)).To(Succeed())
+			Expect(patchHelper.Patch(context.Background(), &claim)).To(Succeed())
 
 			expectedIPAddress := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{

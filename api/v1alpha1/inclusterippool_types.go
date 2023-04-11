@@ -41,6 +41,24 @@ type InClusterIPPoolSpec struct {
 
 // InClusterIPPoolStatus defines the observed state of InClusterIPPool.
 type InClusterIPPoolStatus struct {
+	// Addresses reports the count of total, free, and used IPs in the pool.
+	// +optional
+	Addresses *InClusterIPPoolStatusIPAddresses `json:"ipAddresses,omitempty"`
+}
+
+// InClusterIPPoolStatusIPAddresses contains the count of total, free, and used IPs in a pool.
+type InClusterIPPoolStatusIPAddresses struct {
+	// Total is the total number of IPs configured for the pool.
+	// Counts greater than int can contain will report as math.MaxInt.
+	Total int `json:"total"`
+
+	// Free is the count of unallocated IPs in the pool.
+	// Counts greater than int can contain will report as math.MaxInt.
+	Free int `json:"free"`
+
+	// Used is the count of allocated IPs in the pool.
+	// Counts greater than int can contain will report as math.MaxInt.
+	Used int `json:"used"`
 }
 
 // +kubebuilder:object:root=true
@@ -49,6 +67,9 @@ type InClusterIPPoolStatus struct {
 // +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
 // +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
 // +kubebuilder:printcolumn:name="Addresses",type="string",JSONPath=".spec.addresses",description="List of addresses, within the subnet, to allocate from"
+// +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.ipAddresses.total",description="Count of IPs configured for the pool"
+// +kubebuilder:printcolumn:name="Free",type="integer",JSONPath=".status.ipAddresses.free",description="Count of unallocated IPs in the pool"
+// +kubebuilder:printcolumn:name="Used",type="integer",JSONPath=".status.ipAddresses.used",description="Count of allocated IPs in the pool"
 
 // InClusterIPPool is the Schema for the inclusterippools API.
 type InClusterIPPool struct {
@@ -74,6 +95,9 @@ type InClusterIPPoolList struct {
 // +kubebuilder:printcolumn:name="Subnet",type="string",JSONPath=".spec.subnet",description="Subnet to allocate IPs from"
 // +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
 // +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
+// +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.ipAddresses.total",description="Count of IPs configured for the pool"
+// +kubebuilder:printcolumn:name="Free",type="integer",JSONPath=".status.ipAddresses.free",description="Count of unallocated IPs in the pool"
+// +kubebuilder:printcolumn:name="Used",type="integer",JSONPath=".status.ipAddresses.used",description="Count of allocated IPs in the pool"
 
 // GlobalInClusterIPPool is the Schema for the global inclusterippools API.
 // This pool type is cluster scoped. IPAddressClaims can reference
@@ -109,7 +133,17 @@ func (p *InClusterIPPool) PoolSpec() *InClusterIPPoolSpec {
 	return &p.Spec
 }
 
+// PoolStatus implements the genericInClusterPool interface.
+func (p *InClusterIPPool) PoolStatus() *InClusterIPPoolStatus {
+	return &p.Status
+}
+
 // PoolSpec implements the genericInClusterPool interface.
 func (p *GlobalInClusterIPPool) PoolSpec() *InClusterIPPoolSpec {
 	return &p.Spec
+}
+
+// PoolStatus implements the genericInClusterPool interface.
+func (p *GlobalInClusterIPPool) PoolStatus() *InClusterIPPoolStatus {
+	return &p.Status
 }

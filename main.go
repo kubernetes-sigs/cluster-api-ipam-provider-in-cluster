@@ -31,7 +31,6 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/controllers"
@@ -69,10 +68,6 @@ func main() {
 	flag.StringVar(&watchNamespace, "namespace", "",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
 	flag.StringVar(&watchFilter, "watch-filter", "", "")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	// klog.Background will automatically use the right logger.
@@ -104,6 +99,20 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAddressClaim")
+		os.Exit(1)
+	}
+	if err = (&controllers.InClusterIPPoolReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "InClusterIPPoolReconciler")
+		os.Exit(1)
+	}
+	if err = (&controllers.GlobalInClusterIPPoolReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "GlobalInClusterIPPoolReconciler")
 		os.Exit(1)
 	}
 

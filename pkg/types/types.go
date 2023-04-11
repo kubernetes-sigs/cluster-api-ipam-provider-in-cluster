@@ -11,4 +11,5 @@ import (
 type GenericInClusterPool interface {
 	client.Object
 	PoolSpec() *v1alpha1.InClusterIPPoolSpec
+	PoolStatus() *v1alpha1.InClusterIPPoolStatus
 }
