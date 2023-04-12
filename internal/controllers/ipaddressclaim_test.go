@@ -9,7 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
@@ -57,12 +58,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should ignore the claim", func() {
-				claim := clusterv1.IPAddressClaim{
+				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "unknown-pool-test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "UnknownIPPool",
@@ -73,7 +74,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
-				addresses := clusterv1.IPAddressList{}
+				addresses := ipamv1.IPAddressList{}
 				Consistently(ObjectList(&addresses)).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
@@ -106,12 +107,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate an Address from the Pool", func() {
-				claim := clusterv1.IPAddressClaim{
+				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -119,15 +120,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						},
 					},
 				}
-				address := clusterv1.IPAddress{
+				address := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressSpec{},
+					Spec: ipamv1.IPAddressSpec{},
 				}
 
-				expectedIPAddress := clusterv1.IPAddress{
+				expectedIPAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
@@ -149,7 +150,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test",
 						},
@@ -201,12 +202,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate the lowest available Address from the Pool, regardless of Addresses order", func() {
-				claim := clusterv1.IPAddressClaim{
+				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -215,7 +216,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedIPAddress := clusterv1.IPAddress{
+				expectedIPAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
@@ -237,7 +238,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test",
 						},
@@ -254,12 +255,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
-				actualAddress := clusterv1.IPAddress{
+				actualAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressSpec{},
+					Spec: ipamv1.IPAddressSpec{},
 				}
 
 				Eventually(Object(&actualAddress)).
@@ -294,12 +295,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate an Address from the Pool", func() {
-				claim := clusterv1.IPAddressClaim{
+				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -307,15 +308,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						},
 					},
 				}
-				address := clusterv1.IPAddress{
+				address := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressSpec{},
+					Spec: ipamv1.IPAddressSpec{},
 				}
 
-				expectedIPAddress := clusterv1.IPAddress{
+				expectedIPAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
@@ -337,7 +338,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test",
 						},
@@ -387,12 +388,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate an Address from the Pool, no matter the claim's namespace", func() {
-				claim := clusterv1.IPAddressClaim{
+				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
@@ -401,12 +402,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				claimFromSecondNamespace := clusterv1.IPAddressClaim{
+				claimFromSecondNamespace := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-second-namespace",
 						Namespace: secondNamespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
@@ -415,7 +416,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedIPAddress := clusterv1.IPAddress{
+				expectedIPAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
 						Namespace:  namespace,
@@ -437,7 +438,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test",
 						},
@@ -452,7 +453,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedIPAddressInSecondNamespace := clusterv1.IPAddress{
+				expectedIPAddressInSecondNamespace := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-second-namespace",
 						Namespace:  secondNamespace,
@@ -474,7 +475,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-second-namespace",
 						},
@@ -491,7 +492,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 				Expect(k8sClient.Create(context.Background(), &claimFromSecondNamespace)).To(Succeed())
 
-				expectedAddress := clusterv1.IPAddress{
+				expectedAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
@@ -503,7 +504,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					EqualObject(&expectedIPAddress, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
 				)
 
-				actualAddressFromSecondNamespace := clusterv1.IPAddress{
+				actualAddressFromSecondNamespace := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-second-namespace",
 						Namespace: secondNamespace,
@@ -519,7 +520,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 		When("the referenced pool uses single ip addresses", func() {
 			const poolName = "test-pool-single-ip-addresses"
-			var claim1, claim2 clusterv1.IPAddressClaim
+			var claim1, claim2 ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
 				pool := v1alpha1.InClusterIPPool{
@@ -547,12 +548,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate an Address from the Pool", func() {
-				claim1 = clusterv1.IPAddressClaim{
+				claim1 = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-1",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -561,12 +562,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				claim2 = clusterv1.IPAddressClaim{
+				claim2 = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-2",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -575,7 +576,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress1 := clusterv1.IPAddress{
+				expectedAddress1 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-1",
 						Namespace:  namespace,
@@ -597,7 +598,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-1",
 						},
@@ -612,7 +613,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress2 := clusterv1.IPAddress{
+				expectedAddress2 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-2",
 						Namespace:  namespace,
@@ -634,7 +635,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-2",
 						},
@@ -652,7 +653,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim1)).To(Succeed())
 				Expect(k8sClient.Create(context.Background(), &claim2)).To(Succeed())
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress1.GetName(),
 						Namespace: namespace,
@@ -661,7 +662,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					EqualObject(&expectedAddress1, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
 				)
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress2.GetName(),
 						Namespace: namespace,
@@ -675,7 +676,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		When("there are two pools with the same name in different namespaces", func() {
 			const commonPoolName = "comomon-pool-name"
 			var secondNamespace string
-			var claim1, claim2 clusterv1.IPAddressClaim
+			var claim1, claim2 ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
 				poolA := v1alpha1.InClusterIPPool{
@@ -717,12 +718,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate Addresses from each Pool independently", func() {
-				claim1 = clusterv1.IPAddressClaim{
+				claim1 = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-1",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -731,12 +732,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				claim2 = clusterv1.IPAddressClaim{
+				claim2 = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-2",
 						Namespace: secondNamespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -745,7 +746,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress1 := clusterv1.IPAddress{
+				expectedAddress1 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-1",
 						Namespace:  namespace,
@@ -767,7 +768,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-1",
 						},
@@ -782,7 +783,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress2 := clusterv1.IPAddress{
+				expectedAddress2 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-2",
 						Namespace:  secondNamespace,
@@ -804,7 +805,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-2",
 						},
@@ -822,7 +823,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim1)).To(Succeed())
 				Expect(k8sClient.Create(context.Background(), &claim2)).To(Succeed())
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress1.GetName(),
 						Namespace: namespace,
@@ -831,7 +832,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					EqualObject(&expectedAddress1, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
 				)
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress2.GetName(),
 						Namespace: secondNamespace,
@@ -844,7 +845,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 		When("two pools with the same name, one in a namespace and one cluster-scoped, exist", func() {
 			const commonPoolName = "comomon-pool-name"
-			var claimFromNamespacedPool, claimFromGlobalPool clusterv1.IPAddressClaim
+			var claimFromNamespacedPool, claimFromGlobalPool ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
 				namespacedPool := v1alpha1.InClusterIPPool{
@@ -884,12 +885,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			It("should allocate Addresses from each Pool independently", func() {
-				claimFromNamespacedPool = clusterv1.IPAddressClaim{
+				claimFromNamespacedPool = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-1",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -898,12 +899,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				claimFromGlobalPool = clusterv1.IPAddressClaim{
+				claimFromGlobalPool = ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-2",
 						Namespace: namespace,
 					},
-					Spec: clusterv1.IPAddressClaimSpec{
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
@@ -912,7 +913,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress1 := clusterv1.IPAddress{
+				expectedAddress1 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-1",
 						Namespace:  namespace,
@@ -934,7 +935,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-1",
 						},
@@ -949,7 +950,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 				}
 
-				expectedAddress2 := clusterv1.IPAddress{
+				expectedAddress2 := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-2",
 						Namespace:  namespace,
@@ -971,7 +972,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							},
 						},
 					},
-					Spec: clusterv1.IPAddressSpec{
+					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{
 							Name: "test-2",
 						},
@@ -989,7 +990,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claimFromNamespacedPool)).To(Succeed())
 				Expect(k8sClient.Create(context.Background(), &claimFromGlobalPool)).To(Succeed())
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress1.GetName(),
 						Namespace: namespace,
@@ -998,7 +999,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					EqualObject(&expectedAddress1, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
 				)
 
-				Eventually(Object(&clusterv1.IPAddress{
+				Eventually(Object(&ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedAddress2.GetName(),
 						Namespace: namespace,
@@ -1006,6 +1007,134 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				})).WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
 					EqualObject(&expectedAddress2, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
 				)
+			})
+		})
+
+		When("the pool is paused", func() {
+			When("a claim is created", func() {
+				const poolName = "paused-pool"
+				var pool v1alpha1.InClusterIPPool
+
+				BeforeEach(func() {
+					pool = v1alpha1.InClusterIPPool{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      poolName,
+							Namespace: namespace,
+							Annotations: map[string]string{
+								clusterv1.PausedAnnotation: "",
+							},
+						},
+						Spec: v1alpha1.InClusterIPPoolSpec{
+							Addresses: []string{"10.0.0.50"},
+							Prefix:    24,
+							Gateway:   "10.0.1.1",
+						},
+					}
+					Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
+					Eventually(Get(&pool)).Should(Succeed())
+				})
+
+				AfterEach(func() {
+					deleteNamespacedPool(poolName, namespace)
+					deleteClaim("paused-pool-test", namespace)
+				})
+
+				It("should not create an IPAddress for claims until the pool is unpaused", func() {
+					claim := ipamv1.IPAddressClaim{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "paused-pool-test",
+							Namespace: namespace,
+						},
+						Spec: ipamv1.IPAddressClaimSpec{
+							PoolRef: corev1.TypedLocalObjectReference{
+								APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+								Kind:     "InClusterIPPool",
+								Name:     poolName,
+							},
+						},
+					}
+
+					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+
+					addresses := ipamv1.IPAddressList{}
+					Consistently(ObjectList(&addresses)).
+						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(0)))
+
+					delete(pool.Annotations, clusterv1.PausedAnnotation)
+					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+
+					Eventually(ObjectList(&addresses)).
+						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(1)))
+				})
+
+			})
+
+			When("a claim is deleted", func() {
+				const poolName = "paused-delete-claim-pool"
+				var pool v1alpha1.InClusterIPPool
+
+				BeforeEach(func() {
+					pool = v1alpha1.InClusterIPPool{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      poolName,
+							Namespace: namespace,
+						},
+						Spec: v1alpha1.InClusterIPPoolSpec{
+							Addresses: []string{"10.0.20.51"},
+							Prefix:    24,
+							Gateway:   "10.0.20.1",
+						},
+					}
+					Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
+					Eventually(Get(&pool)).Should(Succeed())
+				})
+
+				AfterEach(func() {
+					deleteNamespacedPool(poolName, namespace)
+				})
+
+				It("should prevent deletion of claims", func() {
+					claim := ipamv1.IPAddressClaim{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "paused-pool-delete-claim-test",
+							Namespace: namespace,
+						},
+						Spec: ipamv1.IPAddressClaimSpec{
+							PoolRef: corev1.TypedLocalObjectReference{
+								APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+								Kind:     "InClusterIPPool",
+								Name:     poolName,
+							},
+						},
+					}
+
+					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+
+					claims := ipamv1.IPAddressClaimList{}
+					Eventually(ObjectList(&claims)).
+						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(1)))
+
+					pool.Annotations = map[string]string{
+						clusterv1.PausedAnnotation: "",
+					}
+					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+					time.Sleep(1 * time.Second)
+
+					Expect(k8sClient.Delete(context.Background(), &claim)).To(Succeed())
+					Consistently(ObjectList(&claims)).
+						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(1)))
+
+					delete(pool.Annotations, clusterv1.PausedAnnotation)
+					Expect(k8sClient.Update(context.Background(), &pool)).To(Succeed())
+
+					Eventually(ObjectList(&claims)).
+						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(0)))
+				})
 			})
 		})
 	})
@@ -1036,12 +1165,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		It("should add the owner references and finalizer", func() {
-			claim := clusterv1.IPAddressClaim{
+			claim := ipamv1.IPAddressClaim{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
 				},
-				Spec: clusterv1.IPAddressClaimSpec{
+				Spec: ipamv1.IPAddressClaimSpec{
 					PoolRef: corev1.TypedLocalObjectReference{
 						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 						Kind:     "InClusterIPPool",
@@ -1050,7 +1179,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				},
 			}
 
-			addressSpec := clusterv1.IPAddressSpec{
+			addressSpec := ipamv1.IPAddressSpec{
 				ClaimRef: corev1.LocalObjectReference{
 					Name: "test",
 				},
@@ -1064,7 +1193,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Gateway: "10.0.0.2",
 			}
 
-			address := clusterv1.IPAddress{
+			address := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
@@ -1075,7 +1204,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			Expect(k8sClient.Create(context.Background(), &address)).To(Succeed())
 			Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
-			expectedIPAddress := clusterv1.IPAddress{
+			expectedIPAddress := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
@@ -1100,7 +1229,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Spec: addressSpec,
 			}
 
-			actual := clusterv1.IPAddress{
+			actual := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
@@ -1140,12 +1269,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		It("should add the owner references and finalizer", func() {
-			claim := clusterv1.IPAddressClaim{
+			claim := ipamv1.IPAddressClaim{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
 				},
-				Spec: clusterv1.IPAddressClaimSpec{
+				Spec: ipamv1.IPAddressClaimSpec{
 					PoolRef: corev1.TypedLocalObjectReference{
 						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 						Kind:     "InClusterIPPool",
@@ -1154,7 +1283,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				},
 			}
 
-			addressSpec := clusterv1.IPAddressSpec{
+			addressSpec := ipamv1.IPAddressSpec{
 				ClaimRef: corev1.LocalObjectReference{
 					Name: "test",
 				},
@@ -1168,7 +1297,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Gateway: "10.0.0.2",
 			}
 
-			address := clusterv1.IPAddress{
+			address := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
@@ -1187,7 +1316,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			Expect(k8sClient.Create(context.Background(), &address)).To(Succeed())
 			Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
-			expectedIPAddress := clusterv1.IPAddress{
+			expectedIPAddress := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Namespace:  namespace,
@@ -1218,7 +1347,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Spec: addressSpec,
 			}
 
-			actual := clusterv1.IPAddress{
+			actual := ipamv1.IPAddress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: namespace,
@@ -1265,7 +1394,7 @@ func deleteNamespacedPool(name, namespace string) {
 }
 
 func deleteClaim(name, namespace string) {
-	claim := clusterv1.IPAddressClaim{
+	claim := ipamv1.IPAddressClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

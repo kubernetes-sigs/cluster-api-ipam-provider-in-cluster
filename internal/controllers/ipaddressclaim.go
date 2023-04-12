@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,9 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
 	ipampredicates "github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/predicates"
@@ -63,6 +68,16 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
 			MaxConcurrentReconciles: 1,
 		}).
+		Watches(
+			&source.Kind{Type: &v1alpha1.InClusterIPPool{}},
+			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("InClusterIPPool")),
+			builder.WithPredicates(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)),
+		).
+		Watches(
+			&source.Kind{Type: &v1alpha1.GlobalInClusterIPPool{}},
+			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
+			builder.WithPredicates(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)),
+		).
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
 			ipampredicates.AddressReferencesPoolKind(metav1.GroupKind{
 				Group: v1alpha1.GroupVersion.Group,
@@ -71,6 +86,37 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		)).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
+}
+
+func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) func(client.Object) []reconcile.Request {
+	return func(a client.Object) []reconcile.Request {
+		pool := a.(pooltypes.GenericInClusterPool)
+		requests := []reconcile.Request{}
+		claims := &ipamv1.IPAddressClaimList{}
+		err := r.Client.List(context.Background(), claims,
+			client.MatchingFields{
+				"index.poolRef": index.IPPoolRefValue(corev1.TypedLocalObjectReference{
+					Name:     pool.GetName(),
+					Kind:     kind,
+					APIGroup: &v1alpha1.GroupVersion.Group,
+				}),
+			},
+			client.InNamespace(pool.GetNamespace()),
+		)
+		if err != nil {
+			return requests
+		}
+		for _, claim := range claims.Items {
+			r := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      claim.Name,
+					Namespace: claim.Namespace,
+				},
+			}
+			requests = append(requests, r)
+		}
+		return requests
+	}
 }
 
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=inclusterippools,verbs=get;list;watch;create;update;patch;delete
@@ -124,6 +170,11 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
 		}
 		pool = gicippool
+	}
+
+	if annotations.HasPaused(pool) {
+		log.Info("IPAddressClaim references Pool which is paused, skipping reconciliation.", "IPAddressClaim", claim.GetName(), "Pool", pool.GetName())
+		return ctrl.Result{}, nil
 	}
 
 	address := &ipamv1.IPAddress{}
