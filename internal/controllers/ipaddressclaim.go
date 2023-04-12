@@ -67,6 +67,9 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				}),
 			),
 		)).
+		// A Watch is added for the Cluster in the case that the Cluster is
+		// unpaused so that a request can be queued to re-reconcile the
+		// IPAddressClaim.
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
 			handler.EnqueueRequestsFromMapFunc(r.clusterToIPClaims),
