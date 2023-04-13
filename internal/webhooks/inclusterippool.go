@@ -191,17 +191,29 @@ func validateAddresses(newPool types.GenericInClusterPool) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.PoolSpec().Prefix, "a valid prefix is required when using addresses"))
 	}
 
+	var hasIPv4Addr, hasIPv6Addr bool
+	for _, address := range newPool.PoolSpec().Addresses {
+		ipSet, err := poolutil.AddressToIPSet(address)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address, "provided address is not a valid IP, range, nor CIDR"))
+			continue
+		}
+		from := ipSet.Ranges()[0].From()
+		hasIPv4Addr = hasIPv4Addr || from.Is4()
+		hasIPv6Addr = hasIPv6Addr || from.Is6()
+	}
+	if hasIPv4Addr && hasIPv6Addr {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), newPool.PoolSpec().Addresses, "provided addresses are of mixed IP families"))
+	}
+
 	if newPool.PoolSpec().Gateway != "" {
-		_, err := netip.ParseAddr(newPool.PoolSpec().Gateway)
+		gateway, err := netip.ParseAddr(newPool.PoolSpec().Gateway)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.PoolSpec().Gateway, err.Error()))
 		}
-	}
 
-	for _, address := range newPool.PoolSpec().Addresses {
-		if !poolutil.AddressStrParses(address) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), address, "provided address is not a valid IP, range, nor CIDR"))
-			continue
+		if gateway.Is6() && hasIPv4Addr || gateway.Is4() && hasIPv6Addr {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.PoolSpec().Gateway, "provided gateway and addresses are of mixed IP families"))
 		}
 	}
 
