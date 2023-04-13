@@ -11,7 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	clusterutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -20,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -64,6 +67,26 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				}),
 			),
 		)).
+		// A Watch is added for the Cluster in the case that the Cluster is
+		// unpaused so that a request can be queued to re-reconcile the
+		// IPAddressClaim.
+		Watches(
+			&source.Kind{Type: &clusterv1.Cluster{}},
+			handler.EnqueueRequestsFromMapFunc(r.clusterToIPClaims),
+			builder.WithPredicates(predicate.Funcs{
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					oldCluster := e.ObjectOld.(*clusterv1.Cluster)
+					newCluster := e.ObjectNew.(*clusterv1.Cluster)
+					return oldCluster.Spec.Paused && !newCluster.Spec.Paused
+				},
+				CreateFunc: func(e event.CreateEvent) bool {
+					if _, ok := e.Object.GetAnnotations()[clusterv1.PausedAnnotation]; !ok {
+						return false
+					}
+					return true
+				},
+			}),
+		).
 		WithOptions(controller.Options{
 			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
 			MaxConcurrentReconciles: 1,
@@ -143,6 +166,14 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
+	if err == nil {
+		if annotations.IsPaused(cluster, claim) {
+			log.Info("IPAddressClaim linked to a cluster that is paused")
+			return reconcile.Result{}, nil
+		}
 	}
 
 	patchHelper, err := patch.NewHelper(claim, r.Client)
@@ -288,6 +319,29 @@ func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim,
 	address.Spec.Prefix = poolSpec.Prefix
 
 	return &address, nil
+}
+
+func (r *IPAddressClaimReconciler) clusterToIPClaims(a client.Object) []reconcile.Request {
+	requests := []reconcile.Request{}
+	vms := &ipamv1.IPAddressClaimList{}
+	err := r.Client.List(context.Background(), vms, client.MatchingLabels(
+		map[string]string{
+			clusterv1.ClusterLabelName: a.GetName(),
+		},
+	))
+	if err != nil {
+		return requests
+	}
+	for _, vm := range vms.Items {
+		r := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      vm.Name,
+				Namespace: vm.Namespace,
+			},
+		}
+		requests = append(requests, r)
+	}
+	return requests
 }
 
 func buildAddressList(addressesInUse []ipamv1.IPAddress, gateway string) []string {
