@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -27,6 +28,9 @@ import (
 const (
 	inClusterIPPoolKind       = "InClusterIPPool"
 	globalInClusterIPPoolKind = "GlobalInClusterIPPool"
+
+	// ProtectPoolFinalizer is used to prevent deletion of a Pool object while its addresses have not been deleted.
+	ProtectPoolFinalizer = "ipam.cluster.x-k8s.io/ProtectPool"
 )
 
 // InClusterIPPoolReconciler reconciles a InClusterIPPool object.
@@ -162,6 +166,19 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 	addressesInUse, err := poolutil.ListAddressesInUse(ctx, c, pool.GetNamespace(), poolTypeRef)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to list addresses")
+	}
+
+	inUseCount := len(addressesInUse)
+
+	if !controllerutil.ContainsFinalizer(pool, ProtectPoolFinalizer) {
+		controllerutil.AddFinalizer(pool, ProtectPoolFinalizer)
+	}
+
+	if !pool.GetDeletionTimestamp().IsZero() {
+		if inUseCount == 0 {
+			controllerutil.RemoveFinalizer(pool, ProtectPoolFinalizer)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	poolIPSet, err := poolutil.IPPoolSpecToIPSet(pool.PoolSpec())
