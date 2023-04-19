@@ -59,6 +59,11 @@ type InClusterIPPoolStatusIPAddresses struct {
 	// Used is the count of allocated IPs in the pool.
 	// Counts greater than int can contain will report as math.MaxInt.
 	Used int `json:"used"`
+
+	// Out of Range is the count of allocated IPs in the pool that is not
+	// contained within spec.Addresses.
+	// Counts greater than int can contain will report as math.MaxInt.
+	OutOfRange int `json:"outOfRange"`
 }
 
 // +kubebuilder:object:root=true

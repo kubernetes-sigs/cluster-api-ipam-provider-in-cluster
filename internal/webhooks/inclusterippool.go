@@ -154,7 +154,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 	inUseBuilder.RemoveSet(newPoolIPSet)
 	outOfRangeIPSet, err := inUseBuilder.IPSet()
 	if err != nil {
-		panic("oh no")
+		return apierrors.NewInternalError(err)
 	}
 
 	if outOfRange := outOfRangeIPSet.Ranges(); len(outOfRange) > 0 {
