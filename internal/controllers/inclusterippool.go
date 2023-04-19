@@ -198,7 +198,6 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 		}
 	}
 
-	inUseCount := len(addressesInUse)
 	free := poolCount - inUseCount
 
 	pool.PoolStatus().Addresses = &v1alpha1.InClusterIPPoolStatusIPAddresses{

@@ -23,7 +23,7 @@ const (
 func SetupIndexes(ctx context.Context, mgr manager.Manager) error {
 	err := mgr.GetCache().IndexField(ctx, &ipamv1.IPAddress{},
 		IPAddressPoolRefCombinedField,
-		ipAddressByCombinedPoolRef,
+		IPAddressByCombinedPoolRef,
 	)
 	if err != nil {
 		return err
@@ -35,7 +35,8 @@ func SetupIndexes(ctx context.Context, mgr manager.Manager) error {
 	)
 }
 
-func ipAddressByCombinedPoolRef(o client.Object) []string {
+// IPAddressByCombinedPoolRef fulfills the IndexerFunc for IPAddress poolRefs.
+func IPAddressByCombinedPoolRef(o client.Object) []string {
 	ip, ok := o.(*ipamv1.IPAddress)
 	if !ok {
 		panic(fmt.Sprintf("Expected an IPAddress but got a %T", o))
