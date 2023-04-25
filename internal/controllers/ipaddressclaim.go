@@ -327,7 +327,7 @@ func (r *IPAddressClaimReconciler) clusterToIPClaims(a client.Object) []reconcil
 	vms := &ipamv1.IPAddressClaimList{}
 	err := r.Client.List(context.Background(), vms, client.MatchingLabels(
 		map[string]string{
-			clusterv1.ClusterLabelName: a.GetName(),
+			clusterv1.ClusterNameLabel: a.GetName(),
 		},
 	))
 	if err != nil {

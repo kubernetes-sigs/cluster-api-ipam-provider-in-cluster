@@ -1413,7 +1413,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Name:      "test",
 					Namespace: namespace,
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: clusterName,
+						clusterv1.ClusterNameLabel: clusterName,
 					},
 				},
 				Spec: ipamv1.IPAddressClaimSpec{
