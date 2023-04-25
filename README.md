@@ -42,6 +42,15 @@ spec:
   gateway: 10.0.0.1
 ```
 
+## Community, discussion, contribution, and support
+
+Learn how to engage with the Kubernetes community on the [community page](http://kubernetes.io/community/).
+
+You can reach the maintainers of this project at:
+
+- [Slack](https://slack.k8s.io/)
+- [Mailing List](https://groups.google.com/a/kubernetes.io/g/dev)
+
 ## Licensing
 
 Copyright (c) 2022 Deutsche Telekom AG.
