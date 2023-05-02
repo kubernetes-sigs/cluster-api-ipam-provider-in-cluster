@@ -240,7 +240,7 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.
 
 	log = log.WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
-	address := poolutil.AddressByName(addressesInUse, claim.Name)
+	address := poolutil.AddressByNamespacedName(addressesInUse, claim.Namespace, claim.Name)
 	if address == nil {
 		var err error
 		address, err = r.allocateAddress(claim, pool, addressesInUse)
