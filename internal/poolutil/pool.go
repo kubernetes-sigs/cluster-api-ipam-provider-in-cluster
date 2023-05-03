@@ -38,10 +38,10 @@ func ListAddressesInUse(ctx context.Context, c client.Client, namespace string, 
 	return addr, err
 }
 
-// AddressByName finds a specific ip address by name in a slice of addresses.
-func AddressByName(addresses []ipamv1.IPAddress, name string) *ipamv1.IPAddress {
+// AddressByNamespacedName finds a specific ip address by namespace and name in a slice of addresses.
+func AddressByNamespacedName(addresses []ipamv1.IPAddress, namespace, name string) *ipamv1.IPAddress {
 	for _, a := range addresses {
-		if a.Name == name {
+		if a.Namespace == namespace && a.Name == name {
 			return &a
 		}
 	}
