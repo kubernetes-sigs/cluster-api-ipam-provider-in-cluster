@@ -29,6 +29,18 @@ spec:
       jsonPath: .spec.last
       name: Last
       type: string
+    - description: Count of IPs configured for the pool
+      jsonPath: .status.ipAddresses.total
+      name: Total
+      type: integer
+    - description: Count of unallocated IPs in the pool
+      jsonPath: .status.ipAddresses.free
+      name: Free
+      type: integer
+    - description: Count of allocated IPs in the pool
+      jsonPath: .status.ipAddresses.used
+      name: Used
+      type: integer
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -82,6 +94,28 @@ spec:
             type: object
           status:
             description: InClusterIPPoolStatus defines the observed state of InClusterIPPool.
+            properties:
+              ipAddresses:
+                description: Addresses reports the count of total, free, and used
+                  IPs in the pool.
+                properties:
+                  free:
+                    description: Free is the count of unallocated IPs in the pool.
+                      Counts greater than int can contain will report as math.MaxInt.
+                    type: integer
+                  total:
+                    description: Total is the total number of IPs configured for the
+                      pool. Counts greater than int can contain will report as math.MaxInt.
+                    type: integer
+                  used:
+                    description: Used is the count of allocated IPs in the pool. Counts
+                      greater than int can contain will report as math.MaxInt.
+                    type: integer
+                required:
+                - free
+                - total
+                - used
+                type: object
             type: object
         type: object
     served: true

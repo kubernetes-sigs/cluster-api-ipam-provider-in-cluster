@@ -4,6 +4,8 @@ package poolutil
 import (
 	"context"
 	"errors"
+	"math"
+	"math/big"
 	"net/netip"
 	"strings"
 
@@ -106,6 +108,37 @@ func AddressToIPSet(addressStr string) (*netipx.IPSet, error) {
 	}
 
 	return builder.IPSet()
+}
+
+// IPSetCount returns the number of IPs contained in the given IPSet.
+// This function returns type int, which is much smaller than
+// the possible size of a range, which could be 2^128 IPs.
+// When an IPSet's count is would be larger than an int, math.MaxInt
+// is returned instead.
+func IPSetCount(ipSet *netipx.IPSet) int {
+	if ipSet == nil {
+		return 0
+	}
+
+	total := big.NewInt(0)
+	for _, iprange := range ipSet.Ranges() {
+		total.Add(
+			total,
+			big.NewInt(0).Sub(
+				big.NewInt(0).SetBytes(iprange.To().AsSlice()),
+				big.NewInt(0).SetBytes(iprange.From().AsSlice()),
+			),
+		)
+		// Subtracting To and From misses that one of those is a valid IP
+		total.Add(total, big.NewInt(1))
+	}
+
+	// If total is greater than Uint64, Uint64() will return 0
+	// We want to display MaxInt if the value overflows what int can contain
+	if total.IsInt64() && total.Uint64() <= uint64(math.MaxInt) {
+		return int(total.Uint64())
+	}
+	return math.MaxInt
 }
 
 // IPPoolSpecToIPSet converts poolSpec to a set of IP.

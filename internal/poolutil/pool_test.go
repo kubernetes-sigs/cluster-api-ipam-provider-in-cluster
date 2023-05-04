@@ -1,6 +1,7 @@
 package poolutil
 
 import (
+	"math"
 	"net/netip"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -407,6 +408,22 @@ var _ = Describe("IPPoolSpecToIPSet", func() {
 		})
 	})
 })
+
+var _ = DescribeTable("IPSetCount", func(expectedCount int, addresses ...string) {
+	ipSet, err := AddressesToIPSet(addresses)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(IPSetCount(ipSet)).To(Equal(expectedCount))
+},
+	Entry("no addresses", 0),
+	Entry("one address", 1, "192.168.1.1"),
+	Entry("two addresses", 2, "192.168.1.1", "192.168.1.2"),
+	Entry("range of addresses", 16, "192.168.1.1-192.168.1.10", "192.168.1.20-192.168.1.25"),
+	Entry("overlapping ranges of addresses", 15, "192.168.1.1-192.168.1.10", "192.168.1.5-192.168.1.15"),
+	Entry("ipv4 CIDRs", 258, "192.168.1.1/24", "192.168.2.1/31"),
+	Entry("range larger than uint64", math.MaxInt, "fe80::1/20"),
+	Entry("range larger than int, but less than uint64", math.MaxInt, "fe80::1/65"),
+	Entry("ipv6 CIDR", 4, "fe80::1/126"),
+)
 
 func mustParse(ipString string) netip.Addr {
 	ip, err := netip.ParseAddr(ipString)
