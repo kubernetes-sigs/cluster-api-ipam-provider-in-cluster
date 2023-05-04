@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/controllers"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/webhooks"
@@ -50,6 +51,7 @@ func init() {
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(v1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

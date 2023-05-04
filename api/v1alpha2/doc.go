@@ -14,18 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package types contains shared types that lack a better home.
-package types
-
-import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
-)
-
-// GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
-type GenericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha2.InClusterIPPoolSpec
-	PoolStatus() *v1alpha2.InClusterIPPoolStatus
-}
+// Package v1alpha2 contains API Schema definitions for the infrastructure v1alpha2 API group
+// +kubebuilder:object:generate=true
+// +groupName=ipam.cluster.x-k8s.io
+package v1alpha2

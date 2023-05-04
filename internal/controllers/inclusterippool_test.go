@@ -29,7 +29,7 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	pooltypes "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
@@ -118,7 +118,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 
 		DescribeTable("it shows the out of range ips if any",
 			func(poolType string, addresses []string, gateway string, updatedAddresses []string, numClaims, expectedOutOfRange int) {
-				poolSpec := v1alpha1.InClusterIPPoolSpec{
+				poolSpec := v1alpha2.InClusterIPPoolSpec{
 					Prefix:    24,
 					Gateway:   gateway,
 					Addresses: addresses,
@@ -126,12 +126,12 @@ var _ = Describe("IP Pool Reconciler", func() {
 
 				switch poolType {
 				case "InClusterIPPool":
-					genericPool = &v1alpha1.InClusterIPPool{
+					genericPool = &v1alpha2.InClusterIPPool{
 						ObjectMeta: metav1.ObjectMeta{GenerateName: testPool, Namespace: namespace},
 						Spec:       poolSpec,
 					}
 				case "GlobalInClusterIPPool":
-					genericPool = &v1alpha1.GlobalInClusterIPPool{
+					genericPool = &v1alpha2.GlobalInClusterIPPool{
 						ObjectMeta: metav1.ObjectMeta{GenerateName: testPool, Namespace: namespace},
 						Spec:       poolSpec,
 					}
@@ -228,7 +228,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 })
 
 func newPool(poolType, generateName, namespace, gateway string, addresses []string, prefix int) pooltypes.GenericInClusterPool {
-	poolSpec := v1alpha1.InClusterIPPoolSpec{
+	poolSpec := v1alpha2.InClusterIPPoolSpec{
 		Prefix:    prefix,
 		Gateway:   gateway,
 		Addresses: addresses,
@@ -236,12 +236,12 @@ func newPool(poolType, generateName, namespace, gateway string, addresses []stri
 
 	switch poolType {
 	case "InClusterIPPool":
-		return &v1alpha1.InClusterIPPool{
+		return &v1alpha2.InClusterIPPool{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: generateName, Namespace: namespace},
 			Spec:       poolSpec,
 		}
 	case "GlobalInClusterIPPool":
-		return &v1alpha1.GlobalInClusterIPPool{
+		return &v1alpha2.GlobalInClusterIPPool{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: generateName},
 			Spec:       poolSpec,
 		}

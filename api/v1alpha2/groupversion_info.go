@@ -14,18 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package types contains shared types that lack a better home.
-package types
+package v1alpha2
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-// GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
-type GenericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha2.InClusterIPPoolSpec
-	PoolStatus() *v1alpha2.InClusterIPPoolStatus
-}
+var (
+	// GroupVersion is group version used to register these objects.
+	GroupVersion = schema.GroupVersion{Group: "ipam.cluster.x-k8s.io", Version: "v1alpha2"}
+
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+
+	// AddToScheme adds the types in this group-version to the given scheme.
+	AddToScheme = SchemeBuilder.AddToScheme
+)

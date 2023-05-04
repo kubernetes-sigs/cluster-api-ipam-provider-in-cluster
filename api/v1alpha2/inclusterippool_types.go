@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,32 +23,12 @@ import (
 // InClusterIPPoolSpec defines the desired state of InClusterIPPool.
 type InClusterIPPoolSpec struct {
 	// Addresses is a list of IP addresses that can be assigned. This set of
-	// addresses can be non-contiguous. Can be omitted if subnet, or first and
-	// last is set.
-	// +optional
-	Addresses []string `json:"addresses,omitempty"`
-
-	// Subnet is the subnet to assign IP addresses from.
-	// Can be omitted if addresses or first, last and prefix are set.
-	// +optional
-	Subnet string `json:"subnet,omitempty"`
-
-	// First is the first address that can be assigned.
-	// If unset, the second address of subnet will be used.
-	// +optional
-	First string `json:"start,omitempty"`
-
-	// Last is the last address that can be assigned.
-	// Must come after first and needs to fit into a common subnet.
-	// If unset, the second last address of subnet will be used.
-	// +optional
-	Last string `json:"end,omitempty"`
+	// addresses can be non-contiguous.
+	Addresses []string `json:"addresses"`
 
 	// Prefix is the network prefix to use.
-	// If unset the prefix from the subnet will be used.
-	// +optional
 	// +kubebuilder:validation:Maximum=128
-	Prefix int `json:"prefix,omitempty"`
+	Prefix int `json:"prefix"`
 
 	// Gateway
 	// +optional
@@ -84,11 +64,8 @@ type InClusterIPPoolStatusIPAddresses struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:deprecatedversion
-// +kubebuilder:printcolumn:name="Subnet",type="string",JSONPath=".spec.subnet",description="Subnet to allocate IPs from"
-// +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
-// +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
-// +kubebuilder:printcolumn:name="Addresses",type="string",JSONPath=".spec.addresses",description="List of addresses, within the subnet, to allocate from"
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Addresses",type="string",JSONPath=".spec.addresses",description="List of addresses, to allocate from"
 // +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.ipAddresses.total",description="Count of IPs configured for the pool"
 // +kubebuilder:printcolumn:name="Free",type="integer",JSONPath=".status.ipAddresses.free",description="Count of unallocated IPs in the pool"
 // +kubebuilder:printcolumn:name="Used",type="integer",JSONPath=".status.ipAddresses.used",description="Count of allocated IPs in the pool"
@@ -113,11 +90,9 @@ type InClusterIPPoolList struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:deprecatedversion
+// +kubebuilder:storageversion
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:printcolumn:name="Subnet",type="string",JSONPath=".spec.subnet",description="Subnet to allocate IPs from"
-// +kubebuilder:printcolumn:name="First",type="string",JSONPath=".spec.first",description="First address of the range to allocate from"
-// +kubebuilder:printcolumn:name="Last",type="string",JSONPath=".spec.last",description="Last address of the range to allocate from"
+// +kubebuilder:printcolumn:name="Addresses",type="string",JSONPath=".spec.addresses",description="List of addresses, to allocate from"
 // +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.ipAddresses.total",description="Count of IPs configured for the pool"
 // +kubebuilder:printcolumn:name="Free",type="integer",JSONPath=".status.ipAddresses.free",description="Count of unallocated IPs in the pool"
 // +kubebuilder:printcolumn:name="Used",type="integer",JSONPath=".status.ipAddresses.used",description="Count of allocated IPs in the pool"

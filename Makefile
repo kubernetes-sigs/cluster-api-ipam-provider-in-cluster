@@ -26,6 +26,11 @@ endif
 
 HACK_BIN=$(shell pwd)/hack/bin
 
+# Set --output-base for conversion-gen if we are not within GOPATH
+ifneq ($(abspath $(ROOT_DIR)),$(shell go env GOPATH)/src/sigs.k8s.io/cluster-api-ipam-provider-in-cluster)
+	OUTPUT_BASE := --output-base=$(ROOT_DIR)
+endif
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -59,8 +64,11 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen conversion-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONVERSION_GEN) --input-dirs=./api/v1alpha1 \
+		--output-file-base=zz_generated.conversion $(OUTPUT_BASE) \
+		--go-header-file=./hack/boilerplate.go.txt
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -193,3 +201,8 @@ go-licenses:
 .PHONY: verify-boilerplate
 verify-boilerplate: ## Verifies all sources have appropriate boilerplate
 	./hack/verify-boilerplate.sh
+
+CONVERSION_GEN = $(HACK_BIN)/conversion-gen
+.PHONY: conversion-gen
+conversion-gen: ## Download conversion-gen locally if necessary.
+	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
