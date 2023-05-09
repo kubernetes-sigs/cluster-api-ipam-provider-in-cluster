@@ -679,7 +679,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		When("there are two pools with the same name in different namespaces", func() {
-			const commonPoolName = "comomon-pool-name"
+			const commonPoolName = "common-pool-name"
 			var secondNamespace string
 			var claim1, claim2 ipamv1.IPAddressClaim
 

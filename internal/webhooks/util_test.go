@@ -44,7 +44,7 @@ func customDefaultValidateTest(ctx context.Context, obj runtime.Object, webhook 
 			g := gomega.NewWithT(t)
 			deleteCopy := obj.DeepCopyObject()
 			g.Expect(webhook.Default(ctx, deleteCopy)).To(gomega.Succeed())
-			g.Expect(webhook.ValidateDelete(ctx, deleteCopy)).To(gomega.Succeed())
+			g.Expect(webhook.ValidateDelete(ctx, deleteCopy)).To(gomega.Succeed(), "should pass validation")
 		})
 	}
 }
