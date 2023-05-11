@@ -103,6 +103,11 @@ spec:
                     description: Free is the count of unallocated IPs in the pool.
                       Counts greater than int can contain will report as math.MaxInt.
                     type: integer
+                  outOfRange:
+                    description: Out of Range is the count of allocated IPs in the
+                      pool that is not contained within spec.Addresses. Counts greater
+                      than int can contain will report as math.MaxInt.
+                    type: integer
                   total:
                     description: Total is the total number of IPs configured for the
                       pool. Counts greater than int can contain will report as math.MaxInt.
@@ -113,6 +118,7 @@ spec:
                     type: integer
                 required:
                 - free
+                - outOfRange
                 - total
                 - used
                 type: object

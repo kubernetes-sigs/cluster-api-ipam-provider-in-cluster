@@ -99,6 +99,67 @@ var _ = Describe("IP Pool Reconciler", func() {
 			Entry("When there is 1 claim with gateway outside of range - GlobalInClusterIPPool",
 				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", 11, 1, 10),
 		)
+
+		DescribeTable("it shows the out of range ips if any",
+			func(poolType string, addresses []string, gateway string, updatedAddresses []string, numClaims, expectedOutOfRange int) {
+				poolSpec := v1alpha1.InClusterIPPoolSpec{
+					Prefix:    24,
+					Gateway:   gateway,
+					Addresses: addresses,
+				}
+
+				switch poolType {
+				case "InClusterIPPool":
+					genericPool = &v1alpha1.InClusterIPPool{
+						ObjectMeta: metav1.ObjectMeta{GenerateName: testPool, Namespace: namespace},
+						Spec:       poolSpec,
+					}
+				case "GlobalInClusterIPPool":
+					genericPool = &v1alpha1.GlobalInClusterIPPool{
+						ObjectMeta: metav1.ObjectMeta{GenerateName: testPool, Namespace: namespace},
+						Spec:       poolSpec,
+					}
+				default:
+					Fail("Unknown pool type")
+				}
+
+				Expect(k8sClient.Create(context.Background(), genericPool)).To(Succeed())
+
+				for i := 0; i < numClaims; i++ {
+					claim := ipamv1.IPAddressClaim{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("test%d", i),
+							Namespace: namespace,
+						},
+						Spec: ipamv1.IPAddressClaimSpec{
+							PoolRef: corev1.TypedLocalObjectReference{
+								APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+								Kind:     poolType,
+								Name:     genericPool.GetName(),
+							},
+						},
+					}
+					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+					createdClaimNames = append(createdClaimNames, claim.Name)
+				}
+
+				Eventually(Object(genericPool)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Status.Addresses.Used", Equal(numClaims)))
+
+				genericPool.PoolSpec().Addresses = updatedAddresses
+				Expect(k8sClient.Update(context.Background(), genericPool)).To(Succeed())
+
+				Eventually(Object(genericPool)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Status.Addresses.OutOfRange", Equal(expectedOutOfRange)))
+			},
+
+			Entry("InClusterIPPool",
+				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", []string{"10.0.0.13-10.0.0.20"}, 5, 3),
+			Entry("GlobalInClusterIPPool",
+				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", []string{"10.0.0.13-10.0.0.20"}, 5, 3),
+		)
 	})
 
 	Context("when the pool has IPAddresses", func() {

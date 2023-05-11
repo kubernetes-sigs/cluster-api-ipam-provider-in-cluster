@@ -19,6 +19,22 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
+// AddressesOutOfRangeIPSet returns an IPSet of the inUseAddresses IPs that are
+// not in the poolIPSet.
+func AddressesOutOfRangeIPSet(inUseAddresses []ipamv1.IPAddress, poolIPSet *netipx.IPSet) (*netipx.IPSet, error) {
+	outOfRangeBuilder := &netipx.IPSetBuilder{}
+	for _, address := range inUseAddresses {
+		ip, err := netip.ParseAddr(address.Spec.Address)
+		if err != nil {
+			// if an address we fetch for the pool is unparsable then it isn't in the pool ranges
+			continue
+		}
+		outOfRangeBuilder.Add(ip)
+	}
+	outOfRangeBuilder.RemoveSet(poolIPSet)
+	return outOfRangeBuilder.IPSet()
+}
+
 // ListAddressesInUse fetches all IPAddresses belonging to the specified pool.
 // Note: requires `index.ipAddressByCombinedPoolRef` to be set up.
 func ListAddressesInUse(ctx context.Context, c client.Reader, namespace string, poolRef corev1.TypedLocalObjectReference) ([]ipamv1.IPAddress, error) {

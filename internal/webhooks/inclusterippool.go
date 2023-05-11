@@ -110,7 +110,7 @@ func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Ob
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
 	newPool, ok := newObj.(types.GenericInClusterPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", newObj))
@@ -119,7 +119,49 @@ func (webhook *InClusterIPPool) ValidateUpdate(_ context.Context, oldObj, newObj
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", oldObj))
 	}
-	return webhook.validate(oldPool, newPool)
+
+	err := webhook.validate(oldPool, newPool)
+	if err != nil {
+		return err
+	}
+
+	oldPoolRef := corev1.TypedLocalObjectReference{
+		APIGroup: pointer.String(v1alpha1.GroupVersion.Group),
+		Kind:     oldPool.GetObjectKind().GroupVersionKind().Kind,
+		Name:     oldPool.GetName(),
+	}
+	inUseAddresses, err := poolutil.ListAddressesInUse(ctx, webhook.Client, oldPool.GetNamespace(), oldPoolRef)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	inUseBuilder := &netipx.IPSetBuilder{}
+	for _, address := range inUseAddresses {
+		ip, err := netip.ParseAddr(address.Spec.Address)
+		if err != nil {
+			// if an address we fetch for the pool is unparsable then it isn't in the pool ranges
+			continue
+		}
+		inUseBuilder.Add(ip)
+	}
+
+	newPoolIPSet, err := poolutil.AddressesToIPSet(newPool.PoolSpec().Addresses)
+	if err != nil {
+		// these addresses are already validated, this shouldn't happen
+		return apierrors.NewInternalError(err)
+	}
+
+	inUseBuilder.RemoveSet(newPoolIPSet)
+	outOfRangeIPSet, err := inUseBuilder.IPSet()
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	if outOfRange := outOfRangeIPSet.Ranges(); len(outOfRange) > 0 {
+		return apierrors.NewBadRequest(fmt.Sprintf("pool addresses does not contain allocated addresses: %v", outOfRange))
+	}
+
+	return nil
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.

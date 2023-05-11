@@ -199,11 +199,16 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 	}
 
 	free := poolCount - inUseCount
+	outOfRangeIPSet, err := poolutil.AddressesOutOfRangeIPSet(addressesInUse, poolIPSet)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to build out of range ip set")
+	}
 
 	pool.PoolStatus().Addresses = &v1alpha1.InClusterIPPoolStatusIPAddresses{
-		Total: poolCount,
-		Used:  inUseCount,
-		Free:  free,
+		Total:      poolCount,
+		Used:       inUseCount,
+		Free:       free,
+		OutOfRange: poolutil.IPSetCount(outOfRangeIPSet),
 	}
 
 	log.Info("Updating pool with usage info", "statusAddresses", pool.PoolStatus().Addresses)
