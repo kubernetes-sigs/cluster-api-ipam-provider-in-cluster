@@ -187,6 +187,89 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 	g.Expect(webhook.ValidateUpdate(ctx, oldGlobalPool, globalPool)).NotTo(Succeed(), "should not allow removing in use IPs from addresses field in pool")
 }
 
+func TestDeleteSkip(t *testing.T) {
+	g := NewWithT(t)
+
+	scheme := runtime.NewScheme()
+	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
+
+	namespacedPool := &v1alpha1.InClusterIPPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pool",
+			Annotations: map[string]string{
+				SkipValidateDeleteWebhookAnnotation: "",
+			},
+		},
+		Spec: v1alpha1.InClusterIPPoolSpec{
+			Addresses: []string{"10.0.0.10-10.0.0.20"},
+			Prefix:    24,
+			Gateway:   "10.0.0.1",
+		},
+	}
+
+	globalPool := &v1alpha1.InClusterIPPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pool",
+			Annotations: map[string]string{
+				SkipValidateDeleteWebhookAnnotation: "",
+			},
+		},
+		Spec: v1alpha1.InClusterIPPoolSpec{
+			Addresses: []string{"10.0.0.10-10.0.0.20"},
+			Prefix:    24,
+			Gateway:   "10.0.0.1",
+		},
+	}
+
+	ips := []client.Object{
+		&ipamv1.IPAddress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "IPAddress",
+				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-ip",
+			},
+			Spec: ipamv1.IPAddressSpec{
+				PoolRef: corev1.TypedLocalObjectReference{
+					APIGroup: pointer.String(namespacedPool.GetObjectKind().GroupVersionKind().Group),
+					Kind:     namespacedPool.GetObjectKind().GroupVersionKind().Kind,
+					Name:     namespacedPool.GetName(),
+				},
+			},
+		},
+		&ipamv1.IPAddress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "IPAddress",
+				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-ip-2",
+			},
+			Spec: ipamv1.IPAddressSpec{
+				PoolRef: corev1.TypedLocalObjectReference{
+					APIGroup: pointer.String(globalPool.GetObjectKind().GroupVersionKind().Group),
+					Kind:     globalPool.GetObjectKind().GroupVersionKind().Kind,
+					Name:     globalPool.GetName(),
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ips...).
+		WithIndex(&ipamv1.IPAddress{}, index.IPAddressPoolRefCombinedField, index.IPAddressByCombinedPoolRef).
+		Build()
+
+	webhook := InClusterIPPool{
+		Client: fakeClient,
+	}
+
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).To(Succeed())
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).To(Succeed())
+}
+
 func TestInClusterIPPoolDefaulting(t *testing.T) {
 	g := NewWithT(t)
 

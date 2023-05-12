@@ -20,6 +20,13 @@ import (
 	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
+const (
+	// SkipValidateDeleteWebhookAnnotation is an annotation that can be applied
+	// to the InClusterIPPool or GlobalInClusterIPPool to skip delete
+	// validation. Necessary for clusterctl move to work as expected.
+	SkipValidateDeleteWebhookAnnotation = "ipam.cluster.x-k8s.io/skip-validate-delete-webhook"
+)
+
 func (webhook *InClusterIPPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.InClusterIPPool{}).
@@ -169,6 +176,10 @@ func (webhook *InClusterIPPool) ValidateDelete(ctx context.Context, obj runtime.
 	pool, ok := obj.(types.GenericInClusterPool)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", obj))
+	}
+
+	if _, ok := pool.GetAnnotations()[SkipValidateDeleteWebhookAnnotation]; ok {
+		return nil
 	}
 
 	poolTypeRef := corev1.TypedLocalObjectReference{
