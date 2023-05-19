@@ -100,7 +100,6 @@ func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {
 
 	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).To(Succeed(), "should allow deletion when no claims exist")
 	g.Expect(webhook.ValidateDelete(ctx, globalPool)).To(Succeed(), "should allow deletion when no claims exist")
-
 }
 
 func TestUpdatingPoolInUseAddresses(t *testing.T) {
