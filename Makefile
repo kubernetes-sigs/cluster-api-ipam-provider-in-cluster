@@ -1,8 +1,21 @@
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/telekom/cluster-api-ipam-provider-in-cluster
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.22
+ENVTEST_K8S_VERSION = 1.26
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -176,3 +189,7 @@ GO_LICENSES = $(HACK_BIN)/go-licenses
 .PHONY: go-licenses
 go-licenses:
 	env GOBIN=$(HACK_BIN) go install github.com/google/go-licenses@latest
+
+.PHONY: verify-boilerplate
+verify-boilerplate: ## Verifies all sources have appropriate boilerplate
+	./hack/verify-boilerplate.sh

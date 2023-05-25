@@ -1,5 +1,7 @@
 /*
-Copyright 2023 The Kubernetes Authors.
+Copyright 2014 The Kubernetes Authors.
+
+fail
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,18 +16,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package types contains shared types that lack a better home.
-package types
-
-import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-)
-
-// GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
-type GenericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha1.InClusterIPPoolSpec
-	PoolStatus() *v1alpha1.InClusterIPPoolStatus
-}
+// Package test contains test boilerplate.
+package test
