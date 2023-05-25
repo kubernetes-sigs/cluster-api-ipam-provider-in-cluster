@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package main is the main package of the Cluster API In-Cluster IPAM Provider.
 package main
 
 import (
