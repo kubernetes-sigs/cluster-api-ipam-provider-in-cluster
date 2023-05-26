@@ -176,17 +176,27 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
-	if err == nil {
+	if _, ok := claim.GetLabels()[clusterv1.ClusterNameLabel]; ok {
+		cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
+				return ctrl.Result{}, nil
+			}
+
+			log.Error(err, "error fetching cluster linked to IPAddressClaim")
+			return ctrl.Result{}, err
+		}
+
 		if annotations.IsPaused(cluster, claim) {
 			log.Info("IPAddressClaim linked to a cluster that is paused, skipping reconciliation")
-			return reconcile.Result{}, nil
+			return ctrl.Result{}, nil
 		}
 	}
 
 	if annotations.HasPaused(claim) {
 		log.Info("IPAddressClaim is paused, skipping reconciliation.")
-		return reconcile.Result{}, nil
+		return ctrl.Result{}, nil
 	}
 
 	patchHelper, err := patch.NewHelper(claim, r.Client)
