@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go4.org/netipx"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
 
 var _ = Describe("AddressListToSet", func() {

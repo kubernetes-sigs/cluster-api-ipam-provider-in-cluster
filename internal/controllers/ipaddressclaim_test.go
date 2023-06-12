@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
 
 var IgnoreUIDsOnIPAddress = IgnorePaths{

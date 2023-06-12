@@ -35,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	//+kubebuilder:scaffold:imports
-	v1alpha1 "github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
+	v1alpha1 "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to

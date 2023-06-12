@@ -2,7 +2,7 @@ domain: cluster.x-k8s.io
 layout:
 - go.kubebuilder.io/v3
 projectName: cluster-api-ipam-provider-in-cluster
-repo: github.com/telekom/cluster-api-ipam-provider-in-cluster
+repo: sigs.k8s.io/cluster-api-ipam-provider-in-cluster
 resources:
 - api:
     crdVersion: v1
@@ -10,6 +10,6 @@ resources:
   controller: true
   group: ipam
   kind: InClusterIPPool
-  path: github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1
+  path: sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1
   version: v1alpha1
 version: "3"

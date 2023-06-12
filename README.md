@@ -63,4 +63,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 ### Dependency Licenses
 
-You can find the licenses of used Go dependencies as a `licenses.tar.gz` archive as part of our [releases](https://github.com/telekom/cluster-api-ipam-provider-in-cluster/releases) and in the `/license` directory contained in our container images available at [ghcr.io/telekom/cluster-api-ipam-provider-in-cluster](https://ghcr.io/telekom/cluster-api-ipam-provider-in-cluster).
+You can find the licenses of used Go dependencies as a `licenses.tar.gz` archive as part of our [releases](https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases) and in the `/license` directory contained in our container images available at [ghcr.io/telekom/cluster-api-ipam-provider-in-cluster](https://ghcr.io/telekom/cluster-api-ipam-provider-in-cluster).

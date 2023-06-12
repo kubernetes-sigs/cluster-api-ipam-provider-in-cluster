@@ -20,7 +20,7 @@ package types
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 )
 
 // GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
