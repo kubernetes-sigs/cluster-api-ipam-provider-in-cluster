@@ -29,9 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/types"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
 func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {

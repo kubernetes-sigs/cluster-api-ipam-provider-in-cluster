@@ -29,8 +29,8 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	pooltypes "github.com/telekom/cluster-api-ipam-provider-in-cluster/pkg/types"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	pooltypes "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
 var _ = Describe("IP Pool Reconciler", func() {

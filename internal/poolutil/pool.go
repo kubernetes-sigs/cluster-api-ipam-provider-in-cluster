@@ -31,8 +31,8 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
 // AddressesOutOfRangeIPSet returns an IPSet of the inUseAddresses IPs that are

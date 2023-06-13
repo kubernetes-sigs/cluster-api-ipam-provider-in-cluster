@@ -1,4 +1,4 @@
-module github.com/telekom/cluster-api-ipam-provider-in-cluster
+module sigs.k8s.io/cluster-api-ipam-provider-in-cluster
 
 go 1.19
 

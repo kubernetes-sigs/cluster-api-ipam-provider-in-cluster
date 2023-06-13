@@ -33,10 +33,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/controllers"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/index"
-	"github.com/telekom/cluster-api-ipam-provider-in-cluster/internal/webhooks"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/controllers"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/webhooks"
 )
 
 var (
