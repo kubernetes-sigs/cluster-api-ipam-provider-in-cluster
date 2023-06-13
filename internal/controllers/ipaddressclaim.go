@@ -226,7 +226,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		pool = gicippool
 	}
 
-	if annotations.HasPaused(pool) {
+	if pool != nil && annotations.HasPaused(pool) {
 		log.Info("IPAddressClaim references Pool which is paused, skipping reconciliation.", "IPAddressClaim", claim.GetName(), "Pool", pool.GetName())
 		return ctrl.Result{}, nil
 	}
@@ -243,6 +243,13 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, claim, address)
 	}
+
+	if pool == nil {
+		err := errors.New("pool not found")
+		log.Error(err, "the referenced pool could not be found")
+		return ctrl.Result{}, nil
+	}
+
 	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, pool.GetNamespace(), claim.Spec.PoolRef)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
@@ -252,15 +259,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	if pool == nil {
-		err := errors.New("pool not found")
-		log.Error(err, "the referenced pool could not be found")
-		return ctrl.Result{}, nil
-	}
-
-	log = log.WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
+	log := ctrl.LoggerFrom(ctx).WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
 	address := poolutil.AddressByNamespacedName(addressesInUse, claim.Namespace, claim.Name)
 	if address == nil {
