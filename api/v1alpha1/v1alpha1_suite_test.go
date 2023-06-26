@@ -14,18 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package types contains shared types that lack a better home.
-package types
+package v1alpha1_test
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"testing"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
-type GenericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha2.InClusterIPPoolSpec
-	PoolStatus() *v1alpha2.InClusterIPPoolStatus
+func TestV1alpha1(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "V1alpha1 Suite")
 }

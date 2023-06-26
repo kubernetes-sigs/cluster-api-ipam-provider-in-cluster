@@ -13,7 +13,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-ipam-cluster-x-k8s-io-v1alpha1-inclusterippool
+      path: /mutate-ipam-cluster-x-k8s-io-v1alpha2-inclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.inclusterippool.ipam.cluster.x-k8s.io
@@ -21,7 +21,7 @@ webhooks:
   - apiGroups:
     - ipam.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -35,7 +35,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-ipam-cluster-x-k8s-io-v1alpha1-globalinclusterippool
+      path: /mutate-ipam-cluster-x-k8s-io-v1alpha2-globalinclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.globalinclusterippool.ipam.cluster.x-k8s.io
@@ -43,7 +43,7 @@ webhooks:
   - apiGroups:
     - ipam.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -65,7 +65,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-ipam-cluster-x-k8s-io-v1alpha1-inclusterippool
+      path: /validate-ipam-cluster-x-k8s-io-v1alpha2-inclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.inclusterippool.ipam.cluster.x-k8s.io
@@ -73,7 +73,7 @@ webhooks:
   - apiGroups:
     - ipam.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE
@@ -88,7 +88,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-ipam-cluster-x-k8s-io-v1alpha1-globalinclusterippool
+      path: /validate-ipam-cluster-x-k8s-io-v1alpha2-globalinclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.globalinclusterippool.ipam.cluster.x-k8s.io
@@ -96,7 +96,7 @@ webhooks:
   - apiGroups:
     - ipam.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE

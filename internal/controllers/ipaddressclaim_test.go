@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 )
 
 var IgnoreUIDsOnIPAddress = IgnorePaths{
@@ -57,16 +57,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "unknown-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:   "10.0.1.1",
-						Last:    "10.0.1.254",
-						Prefix:  24,
-						Gateway: "10.0.1.2",
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.1.1-10.0.1.254"},
+						Prefix:    24,
+						Gateway:   "10.0.1.2",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -106,16 +105,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:   "10.0.0.1",
-						Last:    "10.0.0.254",
-						Prefix:  24,
-						Gateway: "10.0.0.2",
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.0.1-10.0.0.254"},
+						Prefix:    24,
+						Gateway:   "10.0.0.2",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -163,7 +161,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -200,16 +198,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:   "10.0.0.1",
-						Last:    "10.0.0.254",
-						Prefix:  24,
-						Gateway: "10.0.0.2",
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.0.1-10.0.0.254"},
+						Prefix:    24,
+						Gateway:   "10.0.0.2",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -250,12 +247,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Prefix:  24,
 						Gateway: "10.0.1.1",
 						Addresses: []string{
@@ -302,7 +299,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -346,15 +343,14 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:  "10.0.0.1",
-						Last:   "10.0.0.254",
-						Prefix: 24,
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.0.1-10.0.0.254"},
+						Prefix:    24,
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -402,7 +398,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -437,15 +433,14 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "global-pool"
 			var secondNamespace string
 			BeforeEach(func() {
-				pool := v1alpha1.GlobalInClusterIPPool{
+				pool := v1alpha2.GlobalInClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{ // global pool, no namespace
 						Name: poolName,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:   "10.0.0.2",
-						Last:    "10.0.0.254",
-						Prefix:  24,
-						Gateway: "10.0.0.1",
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.0.2-10.0.0.254"},
+						Prefix:    24,
+						Gateway:   "10.0.0.1",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -502,7 +497,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "GlobalInClusterIPPool",
@@ -539,7 +534,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-second-namespace",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "GlobalInClusterIPPool",
@@ -595,15 +590,14 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
-				pool := v1alpha1.GlobalInClusterIPPool{
+				pool := v1alpha2.GlobalInClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: poolName,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
-						First:   "10.0.0.2",
-						Last:    "10.0.0.254",
-						Prefix:  24,
-						Gateway: "10.0.0.1",
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Addresses: []string{"10.0.0.2-10.0.0.254"},
+						Prefix:    24,
+						Gateway:   "10.0.0.1",
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -645,12 +639,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			var claim1, claim2 ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
-				pool := v1alpha1.InClusterIPPool{
+				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Addresses: []string{
 							"10.0.0.50",
 							"10.0.0.128",
@@ -712,7 +706,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-1",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -749,7 +743,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-2",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -801,12 +795,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			var claim1, claim2 ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
-				poolA := v1alpha1.InClusterIPPool{
+				poolA := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      commonPoolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Addresses: []string{"10.0.0.50"},
 						Prefix:    24,
 						Gateway:   "10.0.0.1",
@@ -817,12 +811,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 				secondNamespace = createNamespace()
 
-				poolB := v1alpha1.InClusterIPPool{
+				poolB := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      commonPoolName,
 						Namespace: secondNamespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Addresses: []string{"10.0.0.50"},
 						Prefix:    24,
 						Gateway:   "10.0.0.1",
@@ -882,7 +876,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-1",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -919,7 +913,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-2",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -970,12 +964,12 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			var claimFromNamespacedPool, claimFromGlobalPool ipamv1.IPAddressClaim
 
 			BeforeEach(func() {
-				namespacedPool := v1alpha1.InClusterIPPool{
+				namespacedPool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      commonPoolName,
 						Namespace: namespace,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Addresses: []string{"10.0.0.50"},
 						Prefix:    24,
 						Gateway:   "10.0.0.1",
@@ -984,11 +978,11 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &namespacedPool)).To(Succeed())
 				Eventually(Get(&namespacedPool)).Should(Succeed())
 
-				globalPool := v1alpha1.GlobalInClusterIPPool{
+				globalPool := v1alpha2.GlobalInClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{ // global pool, no namespace
 						Name: commonPoolName,
 					},
-					Spec: v1alpha1.InClusterIPPoolSpec{
+					Spec: v1alpha2.InClusterIPPoolSpec{
 						Addresses: []string{"10.0.0.50"},
 						Prefix:    24,
 						Gateway:   "10.0.0.1",
@@ -1049,7 +1043,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-1",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -1086,7 +1080,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test-2",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "GlobalInClusterIPPool",
@@ -1135,10 +1129,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		When("the pool is paused", func() {
 			When("a claim is created", func() {
 				const poolName = "paused-pool"
-				var pool v1alpha1.InClusterIPPool
+				var pool v1alpha2.InClusterIPPool
 
 				BeforeEach(func() {
-					pool = v1alpha1.InClusterIPPool{
+					pool = v1alpha2.InClusterIPPool{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      poolName,
 							Namespace: namespace,
@@ -1146,7 +1140,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								clusterv1.PausedAnnotation: "",
 							},
 						},
-						Spec: v1alpha1.InClusterIPPoolSpec{
+						Spec: v1alpha2.InClusterIPPoolSpec{
 							Addresses: []string{"10.0.0.50"},
 							Prefix:    24,
 							Gateway:   "10.0.1.1",
@@ -1197,15 +1191,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 			When("a claim is deleted", func() {
 				const poolName = "paused-delete-claim-pool"
-				var pool v1alpha1.InClusterIPPool
+				var pool v1alpha2.InClusterIPPool
 
 				BeforeEach(func() {
-					pool = v1alpha1.InClusterIPPool{
+					pool = v1alpha2.InClusterIPPool{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      poolName,
 							Namespace: namespace,
 						},
-						Spec: v1alpha1.InClusterIPPoolSpec{
+						Spec: v1alpha2.InClusterIPPoolSpec{
 							Addresses: []string{"10.0.20.51"},
 							Prefix:    24,
 							Gateway:   "10.0.20.1",
@@ -1274,16 +1268,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		const poolName = "test-pool"
 
 		BeforeEach(func() {
-			pool := v1alpha1.InClusterIPPool{
+			pool := v1alpha2.InClusterIPPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      poolName,
 					Namespace: namespace,
 				},
-				Spec: v1alpha1.InClusterIPPoolSpec{
-					First:   "10.0.0.1",
-					Last:    "10.0.0.254",
-					Prefix:  24,
-					Gateway: "10.0.0.2",
+				Spec: v1alpha2.InClusterIPPoolSpec{
+					Addresses: []string{"10.0.0.1-10.0.0.254"},
+					Prefix:    24,
+					Gateway:   "10.0.0.2",
 				},
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -1349,7 +1342,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name:               "test",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(false),
 							Kind:               "InClusterIPPool",
@@ -1378,16 +1371,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		const poolName = "test-pool"
 
 		BeforeEach(func() {
-			pool := v1alpha1.InClusterIPPool{
+			pool := v1alpha2.InClusterIPPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      poolName,
 					Namespace: namespace,
 				},
-				Spec: v1alpha1.InClusterIPPoolSpec{
-					First:   "10.0.0.1",
-					Last:    "10.0.0.254",
-					Prefix:  24,
-					Gateway: "10.0.0.2",
+				Spec: v1alpha2.InClusterIPPoolSpec{
+					Addresses: []string{"10.0.0.1-10.0.0.254"},
+					Prefix:    24,
+					Gateway:   "10.0.0.2",
 				},
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -1467,7 +1459,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name:               "test",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(false),
 							Kind:               "InClusterIPPool",
@@ -1496,11 +1488,11 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		const poolName = "test-pool"
 
 		BeforeEach(func() {
-			pool := v1alpha1.GlobalInClusterIPPool{
+			pool := v1alpha2.GlobalInClusterIPPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: poolName,
 				},
-				Spec: v1alpha1.InClusterIPPoolSpec{
+				Spec: v1alpha2.InClusterIPPoolSpec{
 					Addresses: []string{
 						"10.0.0.2-10.0.0.254",
 					},
@@ -1561,7 +1553,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name:               "test",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(false),
 							Kind:               "GlobalInClusterIPPool",
@@ -1598,7 +1590,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name:               "test",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(false),
 							Kind:               "GlobalInClusterIPPool",
@@ -1659,16 +1651,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		)
 
 		BeforeEach(func() {
-			pool := v1alpha1.InClusterIPPool{
+			pool := v1alpha2.InClusterIPPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      poolName,
 					Namespace: namespace,
 				},
-				Spec: v1alpha1.InClusterIPPoolSpec{
-					First:   "10.0.0.1",
-					Last:    "10.0.0.254",
-					Prefix:  24,
-					Gateway: "10.0.0.2",
+				Spec: v1alpha2.InClusterIPPoolSpec{
+					Addresses: []string{"10.0.0.1-10.0.0.254"},
+					Prefix:    24,
+					Gateway:   "10.0.0.2",
 				},
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -1739,7 +1730,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               "test",
 							},
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 								BlockOwnerDeletion: pointer.Bool(true),
 								Controller:         pointer.Bool(false),
 								Kind:               "InClusterIPPool",
@@ -1816,16 +1807,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		)
 
 		BeforeEach(func() {
-			pool := v1alpha1.InClusterIPPool{
+			pool := v1alpha2.InClusterIPPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      poolName,
 					Namespace: namespace,
 				},
-				Spec: v1alpha1.InClusterIPPoolSpec{
-					First:   "10.0.0.1",
-					Last:    "10.0.0.254",
-					Prefix:  24,
-					Gateway: "10.0.0.2",
+				Spec: v1alpha2.InClusterIPPoolSpec{
+					Addresses: []string{"10.0.0.1-10.0.0.254"},
+					Prefix:    24,
+					Gateway:   "10.0.0.2",
 				},
 			}
 			Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
@@ -1882,7 +1872,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name:               "test",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
+							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
 							BlockOwnerDeletion: pointer.Bool(true),
 							Controller:         pointer.Bool(false),
 							Kind:               "InClusterIPPool",
@@ -1943,7 +1933,7 @@ func deleteCluster(name, namespace string) {
 }
 
 func deleteClusterScopedPool(name string) {
-	pool := v1alpha1.GlobalInClusterIPPool{
+	pool := v1alpha2.GlobalInClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -1953,7 +1943,7 @@ func deleteClusterScopedPool(name string) {
 }
 
 func deleteNamespacedPool(name, namespace string) {
-	pool := v1alpha1.InClusterIPPool{
+	pool := v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

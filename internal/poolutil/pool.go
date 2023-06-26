@@ -31,7 +31,6 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
@@ -171,29 +170,6 @@ func IPSetCount(ipSet *netipx.IPSet) int {
 		return int(total.Uint64())
 	}
 	return math.MaxInt
-}
-
-// IPPoolSpecToIPSet converts poolSpec to a set of IP.
-func IPPoolSpecToIPSet(poolSpec *v1alpha1.InClusterIPPoolSpec) (*netipx.IPSet, error) {
-	if len(poolSpec.Addresses) > 0 {
-		return AddressesToIPSet(poolSpec.Addresses)
-	}
-
-	builder := &netipx.IPSetBuilder{}
-
-	start, err := netip.ParseAddr(poolSpec.First)
-	if err != nil {
-		return nil, err
-	}
-
-	end, err := netip.ParseAddr(poolSpec.Last)
-	if err != nil {
-		return nil, err
-	}
-
-	builder.AddRange(netipx.IPRangeFrom(start, end))
-
-	return builder.IPSet()
 }
 
 // AddressStrParses checks to see that the addresss string is one of

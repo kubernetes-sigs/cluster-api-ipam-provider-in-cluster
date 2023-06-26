@@ -44,7 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
@@ -74,11 +74,11 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
 			predicate.Or(
 				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-					Group: v1alpha1.GroupVersion.Group,
+					Group: v1alpha2.GroupVersion.Group,
 					Kind:  inClusterIPPoolKind,
 				}),
 				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-					Group: v1alpha1.GroupVersion.Group,
+					Group: v1alpha2.GroupVersion.Group,
 					Kind:  globalInClusterIPPoolKind,
 				}),
 			),
@@ -105,18 +105,18 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			MaxConcurrentReconciles: 1,
 		}).
 		Watches(
-			&source.Kind{Type: &v1alpha1.InClusterIPPool{}},
+			&source.Kind{Type: &v1alpha2.InClusterIPPool{}},
 			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("InClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
 		Watches(
-			&source.Kind{Type: &v1alpha1.GlobalInClusterIPPool{}},
+			&source.Kind{Type: &v1alpha2.GlobalInClusterIPPool{}},
 			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
 			ipampredicates.AddressReferencesPoolKind(metav1.GroupKind{
-				Group: v1alpha1.GroupVersion.Group,
+				Group: v1alpha2.GroupVersion.Group,
 				Kind:  inClusterIPPoolKind,
 			}),
 		)).
@@ -134,7 +134,7 @@ func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) func(c
 				"index.poolRef": index.IPPoolRefValue(corev1.TypedLocalObjectReference{
 					Name:     pool.GetName(),
 					Kind:     kind,
-					APIGroup: &v1alpha1.GroupVersion.Group,
+					APIGroup: &v1alpha2.GroupVersion.Group,
 				}),
 			},
 			client.InNamespace(pool.GetNamespace()),
@@ -213,13 +213,13 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	var pool pooltypes.GenericInClusterPool
 
 	if claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
-		icippool := &v1alpha1.InClusterIPPool{}
+		icippool := &v1alpha2.InClusterIPPool{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil && !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
 		}
 		pool = icippool
 	} else if claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
-		gicippool := &v1alpha1.GlobalInClusterIPPool{}
+		gicippool := &v1alpha2.GlobalInClusterIPPool{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil && !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
 		}
@@ -325,7 +325,7 @@ func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim,
 		return nil, fmt.Errorf("failed to convert IPAddressList to IPSet: %w", err)
 	}
 
-	poolIPSet, err := poolutil.IPPoolSpecToIPSet(pool.PoolSpec())
+	poolIPSet, err := poolutil.AddressesToIPSet(pool.PoolSpec().Addresses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert pool to range: %w", err)
 	}

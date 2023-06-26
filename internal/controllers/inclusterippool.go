@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	pooltypes "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
@@ -58,7 +58,7 @@ type InClusterIPPoolReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *InClusterIPPoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.InClusterIPPool{}).
+		For(&v1alpha2.InClusterIPPool{}).
 		Watches(&source.Kind{Type: &ipamv1.IPAddress{}},
 			handler.EnqueueRequestsFromMapFunc(r.ipAddressToInClusterIPPool)).
 		Complete(r)
@@ -71,7 +71,7 @@ func (r *InClusterIPPoolReconciler) ipAddressToInClusterIPPool(clientObj client.
 	}
 
 	if ipAddress.Spec.PoolRef.APIGroup != nil &&
-		*ipAddress.Spec.PoolRef.APIGroup == v1alpha1.GroupVersion.Group &&
+		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
 		ipAddress.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
@@ -93,7 +93,7 @@ type GlobalInClusterIPPoolReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *GlobalInClusterIPPoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.GlobalInClusterIPPool{}).
+		For(&v1alpha2.GlobalInClusterIPPool{}).
 		Watches(&source.Kind{Type: &ipamv1.IPAddress{}},
 			handler.EnqueueRequestsFromMapFunc(r.ipAddressToGlobalInClusterIPPool)).
 		Complete(r)
@@ -106,7 +106,7 @@ func (r *GlobalInClusterIPPoolReconciler) ipAddressToGlobalInClusterIPPool(clien
 	}
 
 	if ipAddress.Spec.PoolRef.APIGroup != nil &&
-		*ipAddress.Spec.PoolRef.APIGroup == v1alpha1.GroupVersion.Group &&
+		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
 		ipAddress.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
@@ -129,7 +129,7 @@ func (r *InClusterIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Reconciling pool")
 
-	pool := &v1alpha1.InClusterIPPool{}
+	pool := &v1alpha2.InClusterIPPool{}
 	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch InClusterIPPool")
@@ -149,7 +149,7 @@ func (r *GlobalInClusterIPPoolReconciler) Reconcile(ctx context.Context, req ctr
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Reconciling pool")
 
-	pool := &v1alpha1.GlobalInClusterIPPool{}
+	pool := &v1alpha2.GlobalInClusterIPPool{}
 	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch GlobalInClusterIPPool")
@@ -174,7 +174,7 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 	}()
 
 	poolTypeRef := corev1.TypedLocalObjectReference{
-		APIGroup: pointer.String(v1alpha1.GroupVersion.Group),
+		APIGroup: pointer.String(v1alpha2.GroupVersion.Group),
 		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     pool.GetName(),
 	}
@@ -197,7 +197,7 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 		return ctrl.Result{}, nil
 	}
 
-	poolIPSet, err := poolutil.IPPoolSpecToIPSet(pool.PoolSpec())
+	poolIPSet, err := poolutil.AddressesToIPSet(pool.PoolSpec().Addresses)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to build ip set from pool spec")
 	}
@@ -220,7 +220,7 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 		return ctrl.Result{}, errors.Wrap(err, "failed to build out of range ip set")
 	}
 
-	pool.PoolStatus().Addresses = &v1alpha1.InClusterIPPoolStatusIPAddresses{
+	pool.PoolStatus().Addresses = &v1alpha2.InClusterIPPoolStatusIPAddresses{
 		Total:      poolCount,
 		Used:       inUseCount,
 		Free:       free,

@@ -14,18 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package types contains shared types that lack a better home.
-package types
+package v1alpha2
 
-import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
+// Hub marks InClusterIPPool as a conversion hub.
+func (*InClusterIPPool) Hub() {}
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
-)
+// Hub marks GlobalInClusterIPPool as a conversion hub.
+func (*GlobalInClusterIPPool) Hub() {}
 
-// GenericInClusterPool is a common interface for InClusterIPPool and GlobalInClusterIPPool.
-type GenericInClusterPool interface {
-	client.Object
-	PoolSpec() *v1alpha2.InClusterIPPoolSpec
-	PoolStatus() *v1alpha2.InClusterIPPoolStatus
-}
+// Hub marks InClusterIPPoolList as a conversion hub.
+func (*InClusterIPPoolList) Hub() {}
+
+// Hub marks GlobalInClusterIPPoolList as a conversion hub.
+func (*GlobalInClusterIPPoolList) Hub() {}

@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
@@ -40,22 +40,22 @@ func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {
 	scheme := runtime.NewScheme()
 	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
 
-	namespacedPool := &v1alpha1.InClusterIPPool{
+	namespacedPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
 		},
 	}
 
-	globalPool := &v1alpha1.InClusterIPPool{
+	globalPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
@@ -124,22 +124,22 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 	scheme := runtime.NewScheme()
 	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
 
-	namespacedPool := &v1alpha1.InClusterIPPool{
+	namespacedPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
 		},
 	}
 
-	globalPool := &v1alpha1.InClusterIPPool{
+	globalPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
@@ -208,28 +208,28 @@ func TestDeleteSkip(t *testing.T) {
 	scheme := runtime.NewScheme()
 	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
 
-	namespacedPool := &v1alpha1.InClusterIPPool{
+	namespacedPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 			Annotations: map[string]string{
 				SkipValidateDeleteWebhookAnnotation: "",
 			},
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
 		},
 	}
 
-	globalPool := &v1alpha1.InClusterIPPool{
+	globalPool := &v1alpha2.InClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 			Annotations: map[string]string{
 				SkipValidateDeleteWebhookAnnotation: "",
 			},
 		},
-		Spec: v1alpha1.InClusterIPPoolSpec{
+		Spec: v1alpha2.InClusterIPPoolSpec{
 			Addresses: []string{"10.0.0.10-10.0.0.20"},
 			Prefix:    24,
 			Gateway:   "10.0.0.1",
@@ -290,39 +290,13 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		spec   v1alpha1.InClusterIPPoolSpec
-		expect v1alpha1.InClusterIPPoolSpec
+		spec   v1alpha2.InClusterIPPoolSpec
+		expect v1alpha2.InClusterIPPoolSpec
 		errors bool
 	}{
 		{
-			name: "infer prefix, first and last from subnet",
-			spec: v1alpha1.InClusterIPPoolSpec{
-				Subnet: "10.0.0.0/24",
-			},
-			expect: v1alpha1.InClusterIPPoolSpec{
-				Subnet: "10.0.0.0/24",
-				Prefix: 24,
-				First:  "10.0.0.1",
-				Last:   "10.0.0.254",
-			},
-		},
-		{
-			name: "derive subnet from prefix and first",
-			spec: v1alpha1.InClusterIPPoolSpec{
-				First:  "10.0.0.25",
-				Last:   "10.0.0.30",
-				Prefix: 28,
-			},
-			expect: v1alpha1.InClusterIPPoolSpec{
-				First:  "10.0.0.25",
-				Last:   "10.0.0.30",
-				Prefix: 28,
-				Subnet: "10.0.0.16/28",
-			},
-		},
-		{
 			name: "addresses with gateway and prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -331,7 +305,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 				Gateway: "10.0.0.24",
 				Prefix:  28,
 			},
-			expect: v1alpha1.InClusterIPPoolSpec{
+			expect: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -343,7 +317,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 		},
 		{
 			name: "addresses with prefix and no gateway",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -351,7 +325,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 				},
 				Prefix: 28,
 			},
-			expect: v1alpha1.InClusterIPPoolSpec{
+			expect: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -362,7 +336,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 		},
 		{
 			name: "IPv6 addresses with gateway and prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fe01::2",
 					"fe01::3-fe01::5",
@@ -371,7 +345,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 				Gateway: "fe01::1",
 				Prefix:  28,
 			},
-			expect: v1alpha1.InClusterIPPoolSpec{
+			expect: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fe01::2",
 					"fe01::3-fe01::5",
@@ -383,7 +357,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 		},
 		{
 			name: "IPv6 addresses and prefix with no gateway",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fe01::2",
 					"fe01::3-fe01::5",
@@ -391,7 +365,7 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 				},
 				Prefix: 28,
 			},
-			expect: v1alpha1.InClusterIPPoolSpec{
+			expect: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fe01::2",
 					"fe01::3-fe01::5",
@@ -403,8 +377,8 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		namespacedPool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
-		globalPool := &v1alpha1.GlobalInClusterIPPool{Spec: tt.spec}
+		namespacedPool := &v1alpha2.InClusterIPPool{Spec: tt.spec}
+		globalPool := &v1alpha2.GlobalInClusterIPPool{Spec: tt.spec}
 
 		scheme := runtime.NewScheme()
 		g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
@@ -427,51 +401,24 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 
 type invalidScenarioTest struct {
 	testcase      string
-	spec          v1alpha1.InClusterIPPoolSpec
+	spec          v1alpha2.InClusterIPPoolSpec
 	expectedError string
 }
 
 func TestInvalidScenarios(t *testing.T) {
 	tests := []invalidScenarioTest{
 		{
-			testcase: "specifying addresses and subnet should not allow subnet",
-			spec: v1alpha1.InClusterIPPoolSpec{
-				Addresses: []string{
-					"10.0.0.25",
-					"10.0.0.26",
-					"10.0.0.27",
-				},
-				Subnet: "10.0.0.0/24",
+			testcase: "addresses must be set",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{},
+				Prefix:    24,
+				Gateway:   "10.0.0.1",
 			},
-			expectedError: "subnet may not be used with addresses",
-		},
-		{
-			testcase: "specifying addresses should not allow first",
-			spec: v1alpha1.InClusterIPPoolSpec{
-				Addresses: []string{
-					"10.0.0.25",
-					"10.0.0.26",
-					"10.0.0.27",
-				},
-				First: "10.0.0.2",
-			},
-			expectedError: "start may not be used with addresses",
-		},
-		{
-			testcase: "specifying addresses should not allow last",
-			spec: v1alpha1.InClusterIPPoolSpec{
-				Addresses: []string{
-					"10.0.0.25",
-					"10.0.0.26",
-					"10.0.0.27",
-				},
-				Last: "10.0.0.2",
-			},
-			expectedError: "end may not be used with addresses",
+			expectedError: "addresses is required",
 		},
 		{
 			testcase: "invalid gateway should not be allowed",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -484,7 +431,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "specifying an address that belongs to separate subnets should not be allowed",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -497,7 +444,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "specifying an address that is invalid",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -510,18 +457,18 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "omitting a prefix should not be allowed",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
 				},
 				Gateway: "10.0.0.1",
 			},
-			expectedError: "a valid prefix is required when using addresses",
+			expectedError: "a valid prefix is required",
 		},
 		{
 			testcase: "specifying an invalid prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.25",
 					"10.0.0.26",
@@ -533,7 +480,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "address range is out of order",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.10-10.0.0.5",
 				},
@@ -544,7 +491,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "CIDR address has invalid prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.0.10/33",
 				},
@@ -555,7 +502,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "address range is below Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.0.10-10.0.0.20",
@@ -567,7 +514,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "address range is above Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.2.10-10.0.2.20",
@@ -579,7 +526,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "address range start is below Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.0.20-10.0.1.20",
@@ -591,7 +538,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "address range end is above Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.1.20-10.0.2.20",
@@ -603,7 +550,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "CIDR is below Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.0.1/24",
@@ -615,7 +562,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "CIDR is above Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.2.1/24",
@@ -627,7 +574,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "CIDR start is below Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.0.0/23",
@@ -639,7 +586,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "CIDR end is above Prefix",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.1.0/23",
@@ -651,7 +598,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "Addresses are IPv4 and Gateway is IPv6",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"10.0.1.0",
 					"10.0.0.2-10.0.0.250",
@@ -663,7 +610,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "Addresses are IPv6 and Gateway is IPv4",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fd00::1",
 					"fd00::100-fd00::200",
@@ -675,7 +622,7 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 		{
 			testcase: "Addresses is using mismatched IP families",
-			spec: v1alpha1.InClusterIPPoolSpec{
+			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
 					"fd00::1",
 					"fd00::100-fd00::200",
@@ -689,8 +636,8 @@ func TestInvalidScenarios(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		namespacedPool := &v1alpha1.InClusterIPPool{Spec: tt.spec}
-		globalPool := &v1alpha1.GlobalInClusterIPPool{Spec: tt.spec}
+		namespacedPool := &v1alpha2.InClusterIPPool{Spec: tt.spec}
+		globalPool := &v1alpha2.GlobalInClusterIPPool{Spec: tt.spec}
 
 		g := NewWithT(t)
 		scheme := runtime.NewScheme()
