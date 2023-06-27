@@ -13,7 +13,9 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= ghcr.io/telekom/cluster-api-ipam-provider-in-cluster
+IMG ?= gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-provider-in-cluster
+TAG ?= $(shell cat TAG)
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.26
 
@@ -93,12 +95,12 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: test licenses-report ## Build docker image with the manager.
-	docker build -t ${IMG} .
+docker-build: licenses-report ## Build docker image with the manager.
+	docker build -t ${IMG}:$(TAG) .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${IMG}:$(TAG)
 
 ##@ Release
 
