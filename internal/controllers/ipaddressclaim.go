@@ -93,10 +93,11 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				UpdateFunc: func(e event.UpdateEvent) bool {
 					oldCluster := e.ObjectOld.(*clusterv1.Cluster)
 					newCluster := e.ObjectNew.(*clusterv1.Cluster)
-					return oldCluster.Spec.Paused && !newCluster.Spec.Paused
+					return annotations.IsPaused(oldCluster, oldCluster) && !annotations.IsPaused(newCluster, newCluster)
 				},
 				CreateFunc: func(e event.CreateEvent) bool {
-					return !annotations.HasPaused(e.Object)
+					cluster := e.Object.(*clusterv1.Cluster)
+					return !annotations.IsPaused(cluster, cluster)
 				},
 			}),
 		).
@@ -188,7 +189,7 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 
-		if annotations.IsPaused(cluster, claim) {
+		if annotations.IsPaused(cluster, cluster) {
 			log.Info("IPAddressClaim linked to a cluster that is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}

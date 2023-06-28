@@ -1641,9 +1641,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 	})
 
-	Context("When the cluster is paused and the ipaddressclaim has the cluster-name label", func() {
+	Context("When the cluster is spec.paused true and the ipaddressclaim has the cluster-name label", func() {
 		const (
-			poolName = "test-pool"
+			clusterName = "test-cluster"
+			poolName    = "test-pool"
 		)
 
 		var (
@@ -1667,33 +1668,195 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		Context("When the cluster can be retrieved", func() {
-			BeforeEach(func() {
-				cluster = clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "test-cluster",
-						Namespace:    namespace,
-					},
-					Spec: clusterv1.ClusterSpec{
-						Paused: true,
-					},
-				}
-				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
-				Eventually(Get(&cluster)).Should(Succeed())
-			})
-
 			AfterEach(func() {
 				deleteClaim("test", namespace)
-				deleteCluster(cluster.GetName(), namespace)
+				deleteCluster(clusterName, namespace)
 				deleteNamespacedPool(poolName, namespace)
 			})
 
-			It("does not allocate an ipaddress for the claim until the cluster is unpaused", func() {
+			It("does not allocate an ipaddress upon creating a cluster when the cluster has paused annotation", func() {
 				claim := ipamv1.IPAddressClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
 						Labels: map[string]string{
-							clusterv1.ClusterNameLabel: cluster.GetName(),
+							clusterv1.ClusterNameLabel: clusterName,
+						},
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							clusterv1.PausedAnnotation: "",
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+
+			It("does not allocate an ipaddress upon creating a cluster when the cluster has spec.Paused", func() {
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel: clusterName,
+						},
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: true,
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+
+			It("does not allocate an ipaddress upon updating a cluster when the cluster has spec.paused", func() {
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: true,
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel: clusterName,
+						},
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				// update the cluster
+				cluster.Annotations = map[string]string{"superficial": "change"}
+				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+
+			It("does not allocate an ipaddress upon updating a cluster when the cluster has paused annotation", func() {
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							clusterv1.PausedAnnotation: "",
+						},
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel: clusterName,
+						},
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				// update the cluster
+				cluster.Annotations["superficial"] = "change"
+				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+
+			It("allocates an ipaddress upon updating a cluster when removing spec.paused", func() {
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: true,
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel: clusterName,
 						},
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
@@ -1712,59 +1875,60 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 
-				// Unpause the cluster
+				// update the cluster
 				cluster.Spec.Paused = false
 				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
 
-				expectedIPAddress := ipamv1.IPAddress{
+				Eventually(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(1)))
+			})
+
+			It("allocates an ipaddress upon updating a cluster when removing the paused annotation", func() {
+				cluster = clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test",
-						Namespace:  namespace,
-						Finalizers: []string{ProtectAddressFinalizer},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
-								Kind:               "IPAddressClaim",
-								Name:               "test",
-							},
-							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
-								Kind:               "InClusterIPPool",
-								Name:               poolName,
-							},
+						Name:      clusterName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							clusterv1.PausedAnnotation: "",
 						},
 					},
-					Spec: ipamv1.IPAddressSpec{
-						ClaimRef: corev1.LocalObjectReference{
-							Name: "test",
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel: clusterName,
 						},
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
-						Address: "10.0.0.1",
-						Prefix:  24,
-						Gateway: "10.0.0.2",
 					},
 				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
 
-				address := ipamv1.IPAddress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: namespace,
-					},
-					Spec: ipamv1.IPAddressSpec{},
-				}
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
 
-				Eventually(Object(&address)).
-					WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
-					EqualObject(&expectedIPAddress, IgnoreAutogeneratedMetadata, IgnoreUIDsOnIPAddress),
-				)
+				// update the cluster
+				delete(cluster.Annotations, clusterv1.PausedAnnotation)
+				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
+
+				Eventually(ObjectList(&addresses)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(1)))
 			})
 		})
 
