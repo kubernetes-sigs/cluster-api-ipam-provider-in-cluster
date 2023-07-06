@@ -57,3 +57,7 @@ func Convert_v1alpha1_InClusterIPPoolSpec_To_v1alpha2_InClusterIPPoolSpec(in *In
 
 	return nil
 }
+
+func Convert_v1alpha2_InClusterIPPoolSpec_To_v1alpha1_InClusterIPPoolSpec(in *v1alpha2.InClusterIPPoolSpec, out *InClusterIPPoolSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_InClusterIPPoolSpec_To_v1alpha1_InClusterIPPoolSpec(in, out, s)
+}

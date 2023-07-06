@@ -122,8 +122,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 		}
 		inUseBuilder.Add(ip)
 	}
-
-	newPoolIPSet, err := poolutil.AddressesToIPSet(newPool.PoolSpec().Addresses)
+	newPoolIPSet, err := poolutil.PoolSpecToIPSet(newPool.PoolSpec())
 	if err != nil {
 		// these addresses are already validated, this shouldn't happen
 		return apierrors.NewInternalError(err)

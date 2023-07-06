@@ -211,20 +211,21 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	var pool pooltypes.GenericInClusterPool
+	if !controllerutil.ContainsFinalizer(claim, ReleaseAddressFinalizer) {
+		controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
+	}
 
-	if claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
-		icippool := &v1alpha2.InClusterIPPool{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil && !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
+	pool, err := r.findPool(ctx, claim)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			err := errors.New("pool not found")
+			log.Error(err, "the referenced pool could not be found")
+			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+				return r.reconcileDelete(ctx, claim)
+			}
+			return ctrl.Result{}, nil
 		}
-		pool = icippool
-	} else if claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
-		gicippool := &v1alpha2.GlobalInClusterIPPool{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil && !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
-		}
-		pool = gicippool
+		return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
 	}
 
 	if pool != nil && annotations.HasPaused(pool) {
@@ -232,35 +233,37 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	address := &ipamv1.IPAddress{}
-	if err := r.Client.Get(ctx, req.NamespacedName, address); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
-	}
-
-	if !controllerutil.ContainsFinalizer(claim, ReleaseAddressFinalizer) {
-		controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
-	}
-
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, claim, address)
+		return r.reconcileDelete(ctx, claim)
 	}
 
-	if pool == nil {
-		err := errors.New("pool not found")
-		log.Error(err, "the referenced pool could not be found")
-		return ctrl.Result{}, nil
+	return r.reconcileNormal(ctx, claim, pool)
+}
+
+func (r *IPAddressClaimReconciler) findPool(ctx context.Context, claim *ipamv1.IPAddressClaim) (pooltypes.GenericInClusterPool, error) {
+	if claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
+		icippool := &v1alpha2.InClusterIPPool{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil {
+			return nil, err
+		}
+		return icippool, nil
+	} else if claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
+		gicippool := &v1alpha2.GlobalInClusterIPPool{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil {
+			return nil, err
+		}
+		return gicippool, nil
 	}
+	return nil, fmt.Errorf("unknown pool type: %s", claim.Spec.PoolRef.Kind)
+}
+
+func (r *IPAddressClaimReconciler) reconcileNormal(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx).WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
 	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, pool.GetNamespace(), claim.Spec.PoolRef)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
 	}
-
-	return r.reconcile(ctx, claim, pool, addressesInUse)
-}
-
-func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx).WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
 	address := poolutil.AddressByNamespacedName(addressesInUse, claim.Namespace, claim.Name)
 	if address == nil {
@@ -298,7 +301,16 @@ func (r *IPAddressClaimReconciler) reconcile(ctx context.Context, claim *ipamv1.
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim, address *ipamv1.IPAddress) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) {
+	address := &ipamv1.IPAddress{}
+	namespacedName := types.NamespacedName{
+		Namespace: claim.Namespace,
+		Name:      claim.Name,
+	}
+	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
+	}
+
 	if address.Name != "" {
 		var err error
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
@@ -321,12 +333,12 @@ func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *i
 func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
 	poolSpec := pool.PoolSpec()
 
-	inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse, poolSpec.Gateway))
+	inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert IPAddressList to IPSet: %w", err)
 	}
 
-	poolIPSet, err := poolutil.AddressesToIPSet(pool.PoolSpec().Addresses)
+	poolIPSet, err := poolutil.PoolSpecToIPSet(poolSpec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert pool to range: %w", err)
 	}
@@ -367,17 +379,11 @@ func (r *IPAddressClaimReconciler) clusterToIPClaims(a client.Object) []reconcil
 	return requests
 }
 
-func buildAddressList(addressesInUse []ipamv1.IPAddress, gateway string) []string {
-	// Add extra capacity for the case that the pool's gateway is specified
-	addrStrings := make([]string, len(addressesInUse), len(addressesInUse)+1)
+func buildAddressList(addressesInUse []ipamv1.IPAddress) []string {
+	addrStrings := make([]string, len(addressesInUse))
 	for i, address := range addressesInUse {
 		addrStrings[i] = address.Spec.Address
 	}
-
-	if gateway != "" {
-		addrStrings = append(addrStrings, gateway)
-	}
-
 	return addrStrings
 }
 

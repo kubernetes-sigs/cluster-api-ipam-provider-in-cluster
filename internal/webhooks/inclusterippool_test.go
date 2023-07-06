@@ -63,40 +63,8 @@ func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {
 	}
 
 	ips := []client.Object{
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(namespacedPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     namespacedPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     namespacedPool.GetName(),
-				},
-				Address: "10.0.0.10",
-			},
-		},
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip-2",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(globalPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     globalPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     globalPool.GetName(),
-				},
-				Address: "10.0.0.10",
-			},
-		},
+		createIP("my-ip", "10.0.0.10", namespacedPool),
+		createIP("my-ip-2", "10.0.0.10", globalPool),
 	}
 
 	fakeClient := fake.NewClientBuilder().
@@ -135,7 +103,7 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 		},
 	}
 
-	globalPool := &v1alpha2.InClusterIPPool{
+	globalPool := &v1alpha2.GlobalInClusterIPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "my-pool",
 		},
@@ -147,40 +115,8 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 	}
 
 	ips := []client.Object{
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(namespacedPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     namespacedPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     namespacedPool.GetName(),
-				},
-				Address: "10.0.0.10",
-			},
-		},
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip-2",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(globalPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     globalPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     globalPool.GetName(),
-				},
-				Address: "10.0.0.10",
-			},
-		},
+		createIP("my-ip", "10.0.0.10", namespacedPool),
+		createIP("my-ip-2", "10.0.0.10", globalPool),
 	}
 
 	fakeClient := fake.NewClientBuilder().
@@ -237,38 +173,8 @@ func TestDeleteSkip(t *testing.T) {
 	}
 
 	ips := []client.Object{
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(namespacedPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     namespacedPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     namespacedPool.GetName(),
-				},
-			},
-		},
-		&ipamv1.IPAddress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddress",
-				APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-ip-2",
-			},
-			Spec: ipamv1.IPAddressSpec{
-				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String(globalPool.GetObjectKind().GroupVersionKind().Group),
-					Kind:     globalPool.GetObjectKind().GroupVersionKind().Kind,
-					Name:     globalPool.GetName(),
-				},
-			},
-		},
+		createIP("my-ip", "", namespacedPool),
+		createIP("my-ip-2", "", globalPool),
 	}
 
 	fakeClient := fake.NewClientBuilder().
@@ -709,4 +615,24 @@ func testUpdate(ctx context.Context, obj runtime.Object, webhook customDefaulter
 		return err
 	}
 	return webhook.ValidateUpdate(ctx, updateCopy, updatedCopy)
+}
+
+func createIP(name string, ip string, pool types.GenericInClusterPool) *ipamv1.IPAddress {
+	return &ipamv1.IPAddress{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "IPAddress",
+			APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: ipamv1.IPAddressSpec{
+			PoolRef: corev1.TypedLocalObjectReference{
+				APIGroup: pointer.String(pool.GetObjectKind().GroupVersionKind().Group),
+				Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
+				Name:     pool.GetName(),
+			},
+			Address: ip,
+		},
+	}
 }

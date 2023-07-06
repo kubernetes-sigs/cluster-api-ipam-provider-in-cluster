@@ -197,7 +197,7 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 		return ctrl.Result{}, nil
 	}
 
-	poolIPSet, err := poolutil.AddressesToIPSet(pool.PoolSpec().Addresses)
+	poolIPSet, err := poolutil.PoolSpecToIPSet(pool.PoolSpec())
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to build ip set from pool spec")
 	}

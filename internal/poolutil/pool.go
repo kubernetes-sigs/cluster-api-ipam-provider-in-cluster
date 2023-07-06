@@ -31,6 +31,7 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
@@ -96,6 +97,38 @@ func FindFreeAddress(poolIPSet *netipx.IPSet, inUseIPSet *netipx.IPSet) (netip.A
 		}
 	}
 	return netip.Addr{}, errors.New("no address available")
+}
+
+// PoolSpecToIPSet converts a pool spec to an IPSet. Reserved addresses will be
+// omitted from the set depending on whether the
+// `spec.AllocateReservedIPAddresses` flag is set.
+func PoolSpecToIPSet(poolSpec *v1alpha2.InClusterIPPoolSpec) (*netipx.IPSet, error) {
+	addressesIPSet, err := AddressesToIPSet(poolSpec.Addresses)
+	if err != nil {
+		return nil, err // should not happen, webhook validates pools for correctness.
+	}
+
+	builder := &netipx.IPSetBuilder{}
+	builder.AddSet(addressesIPSet)
+
+	if !poolSpec.AllocateReservedIPAddresses {
+		subnet := netip.PrefixFrom(addressesIPSet.Ranges()[0].From(), poolSpec.Prefix) // safe because of webhook validation
+		subnetRange := netipx.RangeOfPrefix(subnet)
+		builder.Remove(subnetRange.From()) // network addr in IPv4, anycast addr in IPv6
+		if subnet.Addr().Is4() {
+			builder.Remove(subnetRange.To()) // broadcast addr
+		}
+	}
+
+	if poolSpec.Gateway != "" {
+		gateway, err := netip.ParseAddr(poolSpec.Gateway)
+		if err != nil {
+			return nil, err // should not happen, webhook validates pools for correctness.
+		}
+		builder.Remove(gateway)
+	}
+
+	return builder.IPSet()
 }
 
 // AddressesToIPSet converts an array of addresses to an AddressesToIPSet

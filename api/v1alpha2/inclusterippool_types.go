@@ -33,6 +33,14 @@ type InClusterIPPoolSpec struct {
 	// Gateway
 	// +optional
 	Gateway string `json:"gateway,omitempty"`
+
+	// AllocateReservedIPAddresses causes the provider to allocate the network
+	// address (the first address in the inferred subnet) and broadcast address
+	// (the last address in the inferred subnet) when IPv4. The provider will
+	// allocate the anycast address address (the first address in the inferred
+	// subnet) when IPv6.
+	// +optional
+	AllocateReservedIPAddresses bool `json:"allocateReservedIPAddresses,omitempty"`
 }
 
 // InClusterIPPoolStatus defines the observed state of InClusterIPPool.
