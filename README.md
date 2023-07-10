@@ -2,6 +2,17 @@
 
 This is a IPAM provider for Cluster API that manages pools of IP addresses using Kubernetes resources. It serves as a reference implementation for IPAM providers, but can also be used as a simple replacement for DHCP.
 
+## Cluster API setup via clusterctl
+
+This release comes with clusterctl support. Since it's not added to the list of built-in providers yet, you'll need to add the following to your `~/.cluster-api/clusterctl.yaml` if you want to install it using `clusterctl init --ipam incluster`:
+
+```yaml
+providers:
+  - name: in-cluster
+    url: https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/ipam-components.yaml
+    type: IPAMProvider
+```
+
 ## Usage
 
 This provider comes with a `InClusterIPPool` resource to specify the pools from which addresses should be assigned. You can provide an address range using start and end addresses, as well as a prefix length, or a set of addresses with the prefix and gateway.
