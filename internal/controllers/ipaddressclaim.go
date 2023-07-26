@@ -75,11 +75,11 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			predicate.Or(
 				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
 					Group: v1alpha2.GroupVersion.Group,
-					Kind:  inClusterIPPoolKind,
+					Kind:  poolutil.InClusterIPPoolKind,
 				}),
 				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
 					Group: v1alpha2.GroupVersion.Group,
-					Kind:  globalInClusterIPPoolKind,
+					Kind:  poolutil.GlobalInClusterIPPoolKind,
 				}),
 			),
 		)).
@@ -118,7 +118,7 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
 			ipampredicates.AddressReferencesPoolKind(metav1.GroupKind{
 				Group: v1alpha2.GroupVersion.Group,
-				Kind:  inClusterIPPoolKind,
+				Kind:  poolutil.InClusterIPPoolKind,
 			}),
 		)).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
@@ -213,13 +213,13 @@ func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	var pool pooltypes.GenericInClusterPool
 
-	if claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
+	if claim.Spec.PoolRef.Kind == poolutil.InClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil && !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
 		}
 		pool = icippool
-	} else if claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
+	} else if claim.Spec.PoolRef.Kind == poolutil.GlobalInClusterIPPoolKind {
 		gicippool := &v1alpha2.GlobalInClusterIPPool{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil && !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")

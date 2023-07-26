@@ -34,6 +34,11 @@ import (
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 )
 
+const (
+	InClusterIPPoolKind       = "InClusterIPPool"
+	GlobalInClusterIPPoolKind = "GlobalInClusterIPPool"
+)
+
 // AddressesOutOfRangeIPSet returns an IPSet of the inUseAddresses IPs that are
 // not in the poolIPSet.
 func AddressesOutOfRangeIPSet(inUseAddresses []ipamv1.IPAddress, poolIPSet *netipx.IPSet) (*netipx.IPSet, error) {
@@ -54,12 +59,15 @@ func AddressesOutOfRangeIPSet(inUseAddresses []ipamv1.IPAddress, poolIPSet *neti
 // Note: requires `index.ipAddressByCombinedPoolRef` to be set up.
 func ListAddressesInUse(ctx context.Context, c client.Reader, namespace string, poolRef corev1.TypedLocalObjectReference) ([]ipamv1.IPAddress, error) {
 	addresses := &ipamv1.IPAddressList{}
-	err := c.List(ctx, addresses,
+	opts := []client.ListOption{
 		client.MatchingFields{
 			index.IPAddressPoolRefCombinedField: index.IPPoolRefValue(poolRef),
 		},
-		client.InNamespace(namespace),
-	)
+	}
+	if poolRef.Kind == InClusterIPPoolKind {
+		opts = append(opts, client.InNamespace(namespace))
+	}
+	err := c.List(ctx, addresses, opts...)
 	addr := []ipamv1.IPAddress{}
 	for _, a := range addresses.Items {
 		gv, _ := schema.ParseGroupVersion(a.APIVersion)

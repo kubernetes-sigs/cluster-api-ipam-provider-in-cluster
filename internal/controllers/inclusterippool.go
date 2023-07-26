@@ -42,9 +42,6 @@ import (
 )
 
 const (
-	inClusterIPPoolKind       = "InClusterIPPool"
-	globalInClusterIPPoolKind = "GlobalInClusterIPPool"
-
 	// ProtectPoolFinalizer is used to prevent deletion of a Pool object while its addresses have not been deleted.
 	ProtectPoolFinalizer = "ipam.cluster.x-k8s.io/ProtectPool"
 )
@@ -72,7 +69,7 @@ func (r *InClusterIPPoolReconciler) ipAddressToInClusterIPPool(clientObj client.
 
 	if ipAddress.Spec.PoolRef.APIGroup != nil &&
 		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
-		ipAddress.Spec.PoolRef.Kind == inClusterIPPoolKind {
+		ipAddress.Spec.PoolRef.Kind == poolutil.InClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
 				Namespace: ipAddress.Namespace,
@@ -107,7 +104,7 @@ func (r *GlobalInClusterIPPoolReconciler) ipAddressToGlobalInClusterIPPool(clien
 
 	if ipAddress.Spec.PoolRef.APIGroup != nil &&
 		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
-		ipAddress.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
+		ipAddress.Spec.PoolRef.Kind == poolutil.GlobalInClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
 				Namespace: ipAddress.Namespace,
