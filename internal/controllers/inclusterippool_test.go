@@ -56,8 +56,8 @@ var _ = Describe("IP Pool Reconciler", func() {
 		})
 
 		DescribeTable("it shows the total, used, free ip addresses in the pool",
-			func(poolType string, addresses []string, gateway string, expectedTotal, expectedUsed, expectedFree int) {
-				genericPool = newPool(poolType, testPool, namespace, gateway, addresses, 24)
+			func(poolType string, prefix int, addresses []string, gateway string, expectedTotal, expectedUsed, expectedFree int) {
+				genericPool = newPool(poolType, testPool, namespace, gateway, addresses, prefix)
 				Expect(k8sClient.Create(context.Background(), genericPool)).To(Succeed())
 
 				Eventually(Object(genericPool)).
@@ -94,34 +94,47 @@ var _ = Describe("IP Pool Reconciler", func() {
 			},
 
 			Entry("When there is 1 claim and no gateway - InClusterIPPool",
-				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "", 11, 1, 10),
+				"InClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "", 11, 1, 10),
 			Entry("When there are 2 claims and no gateway - InClusterIPPool",
-				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "", 11, 2, 9),
+				"InClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "", 11, 2, 9),
 			Entry("When there is 1 claim with gateway in range - InClusterIPPool",
-				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 1, 9),
+				"InClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 1, 9),
 			Entry("When there are 2 claims with gateway in range - InClusterIPPool",
-				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 2, 8),
+				"InClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 2, 8),
 			Entry("When there is 1 claim with gateway outside of range - InClusterIPPool",
-				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", 11, 1, 10),
+				"InClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", 11, 1, 10),
+			Entry("When the addresses range includes network addr, it is not available - InClusterIPPool",
+				"InClusterIPPool", 24, []string{"10.0.0.0-10.0.0.1"}, "10.0.0.2", 1, 1, 0),
+			Entry("When the addresses range includes broadcast, it is not available - InClusterIPPool",
+				"InClusterIPPool", 24, []string{"10.0.0.254-10.0.0.255"}, "10.0.0.1", 1, 1, 0),
+			Entry("When the addresses range is IPv6 and the last range in the subnet, it is available - InClusterIPPool",
+				"InClusterIPPool", 120, []string{"fe80::ffff"}, "fe80::a", 1, 1, 0),
 
 			Entry("When there is 1 claim and no gateway - GlobalInClusterIPPool",
-				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "", 11, 1, 10),
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "", 11, 1, 10),
 			Entry("When there are 2 claims and no gateway - GlobalInClusterIPPool",
-				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "", 11, 2, 9),
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "", 11, 2, 9),
 			Entry("When there is 1 claim with gateway in range - GlobalInClusterIPPool",
-				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 1, 9),
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 1, 9),
 			Entry("When there are 2 claims with gateway in range - GlobalInClusterIPPool",
-				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 2, 8),
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.10", 10, 2, 8),
 			Entry("When there is 1 claim with gateway outside of range - GlobalInClusterIPPool",
-				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", 11, 1, 10),
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", 11, 1, 10),
+			Entry("When the addresses range includes network addr, it is not available - GlobalInClusterIPPool",
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.0-10.0.0.1"}, "10.0.0.2", 1, 1, 0),
+			Entry("When the addresses range includes broadcast, it is not available - GlobalInClusterIPPool",
+				"GlobalInClusterIPPool", 24, []string{"10.0.0.254-10.0.0.255"}, "10.0.0.1", 1, 1, 0),
+			Entry("When the addresses range is IPv6 and the last range in the subnet, it is available - GlobalInClusterIPPool",
+				"GlobalInClusterIPPool", 120, []string{"fe80::ffff"}, "fe80::a", 1, 1, 0),
 		)
 
 		DescribeTable("it shows the out of range ips if any",
 			func(poolType string, addresses []string, gateway string, updatedAddresses []string, numClaims, expectedOutOfRange int) {
 				poolSpec := v1alpha2.InClusterIPPoolSpec{
-					Prefix:    24,
-					Gateway:   gateway,
-					Addresses: addresses,
+					Prefix:                      24,
+					Gateway:                     gateway,
+					Addresses:                   addresses,
+					AllocateReservedIPAddresses: true,
 				}
 
 				switch poolType {
@@ -164,6 +177,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 					HaveField("Status.Addresses.Used", Equal(numClaims)))
 
 				genericPool.PoolSpec().Addresses = updatedAddresses
+				genericPool.PoolSpec().AllocateReservedIPAddresses = false
 				Expect(k8sClient.Update(context.Background(), genericPool)).To(Succeed())
 
 				Eventually(Object(genericPool)).
@@ -173,8 +187,20 @@ var _ = Describe("IP Pool Reconciler", func() {
 
 			Entry("InClusterIPPool",
 				"InClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", []string{"10.0.0.13-10.0.0.20"}, 5, 3),
+			Entry("InClusterIPPool when removing network address",
+				"InClusterIPPool", []string{"10.0.0.0-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.1-10.0.0.255"}, 4, 0),
+			Entry("InClusterIPPool when removing gateway address",
+				"InClusterIPPool", []string{"10.0.0.0-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.0", "10.0.0.2-10.0.0.255"}, 5, 1),
+			Entry("InClusterIPPool when removing broadcast address",
+				"InClusterIPPool", []string{"10.0.0.251-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.251-10.0.0.254"}, 5, 1),
 			Entry("GlobalInClusterIPPool",
 				"GlobalInClusterIPPool", []string{"10.0.0.10-10.0.0.20"}, "10.0.0.1", []string{"10.0.0.13-10.0.0.20"}, 5, 3),
+			Entry("GlobalInClusterIPPool when removing network address",
+				"GlobalInClusterIPPool", []string{"10.0.0.0-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.1-10.0.0.255"}, 4, 0),
+			Entry("GlobalInClusterIPPool when removing gateway address",
+				"GlobalInClusterIPPool", []string{"10.0.0.0-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.0", "10.0.0.2-10.0.0.255"}, 5, 1),
+			Entry("GlobalInClusterIPPool when removing broadcast address",
+				"GlobalInClusterIPPool", []string{"10.0.0.251-10.0.0.255"}, "10.0.0.1", []string{"10.0.0.251-10.0.0.254"}, 5, 1),
 		)
 	})
 

@@ -23,7 +23,215 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go4.org/netipx"
+
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 )
+
+var _ = Describe("PoolSpecToIPSet", func() {
+	It("converts a pool spec to a set", func() {
+		spec := &v1alpha2.InClusterIPPoolSpec{
+			Gateway: "192.168.0.1",
+			Prefix:  24,
+			Addresses: []string{
+				"192.168.0.2",
+				"192.168.0.3-192.168.0.4",
+				"192.168.0.6/31",
+			},
+		}
+		ipSet, err := PoolSpecToIPSet(spec)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSet.Contains(mustParse("192.168.0.2"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.3"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.4"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.6"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.7"))).To(BeTrue())
+		Expect(IPSetCount(ipSet)).To(Equal(5))
+	})
+	It("excludes the 'network' address from the IPSet", func() {
+		spec := &v1alpha2.InClusterIPPoolSpec{
+			Gateway: "192.168.0.1",
+			Prefix:  24,
+			Addresses: []string{
+				"192.168.0.0",
+				"192.168.0.3-192.168.0.4",
+				"192.168.0.6/31",
+			},
+		}
+		ipSet, err := PoolSpecToIPSet(spec)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSet.Contains(mustParse("192.168.0.0"))).To(BeFalse())
+		Expect(IPSetCount(ipSet)).To(Equal(4))
+	})
+	It("excludes the broadcast address from the IPSet", func() {
+		spec := &v1alpha2.InClusterIPPoolSpec{
+			Gateway: "192.168.0.1",
+			Prefix:  16,
+			Addresses: []string{
+				"192.168.1.0",
+				"192.168.0.255",
+				"192.168.0.3-192.168.0.4",
+				"192.168.0.6/31",
+				"192.168.255.255",
+			},
+		}
+		ipSet, err := PoolSpecToIPSet(spec)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSet.Contains(mustParse("192.168.1.0"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.255"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.255.255"))).To(BeFalse())
+		Expect(IPSetCount(ipSet)).To(Equal(6))
+	})
+	It("excludes the gateway address from the IPSet", func() {
+		spec := &v1alpha2.InClusterIPPoolSpec{
+			Gateway: "192.168.0.1",
+			Prefix:  24,
+			Addresses: []string{
+				"192.168.0.1",
+				"192.168.0.3-192.168.0.4",
+				"192.168.0.6/31",
+			},
+		}
+		ipSet, err := PoolSpecToIPSet(spec)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSet.Contains(mustParse("192.168.0.1"))).To(BeFalse())
+		Expect(IPSetCount(ipSet)).To(Equal(4))
+	})
+	Context("when the allocateReservedIPAddresses flag is true", func() {
+		var ipSet *netipx.IPSet
+		BeforeEach(func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway:                     "192.168.0.1",
+				Prefix:                      24,
+				AllocateReservedIPAddresses: true,
+				Addresses: []string{
+					"192.168.0.0",
+					"192.168.0.1",
+					"192.168.0.3-192.168.0.4",
+					"192.168.0.6/31",
+					"192.168.0.255",
+				},
+			}
+			var err error
+			ipSet, err = PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("includes the network and broadcast addresses in the IPSet", func() {
+			Expect(ipSet.Contains(mustParse("192.168.0.0"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.6"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.7"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.255"))).To(BeTrue())
+			Expect(IPSetCount(ipSet)).To(Equal(6))
+		})
+		It("never includes the gateway when set", func() {
+			Expect(ipSet.Contains(mustParse("192.168.0.1"))).To(BeFalse())
+		})
+	})
+
+	Context("with IPv6 addresses", func() {
+		It("converts a pool spec to a set", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "fd01::1",
+				Prefix:  120,
+				Addresses: []string{
+					"fd01::2",
+					"fd01::3-fd01::4",
+					"fd01::6/127",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("fd01::2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::6"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::7"))).To(BeTrue())
+			Expect(IPSetCount(ipSet)).To(Equal(5))
+		})
+		It("excludes the anycast address from the IPSet", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "fd01::1",
+				Prefix:  120,
+				Addresses: []string{
+					"fd01::0",
+					"fd01::3-fd01::4",
+					"fd01::6/127",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("fd01::0"))).To(BeFalse())
+			Expect(IPSetCount(ipSet)).To(Equal(4))
+		})
+		It("includes the broadcast address from the IPSet", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "fd01::1",
+				Prefix:  112,
+				Addresses: []string{
+					"fd01::ffff",
+					"fd01::1:0",
+					"fd01::3-fd01::4",
+					"fd01::6/127",
+					"fd01::ffff:ffff",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("fd01::1:0"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::ffff"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("fd01::ffff:ffff"))).To(BeTrue())
+			Expect(IPSetCount(ipSet)).To(Equal(7))
+		})
+		It("excludes the gateway address from the IPSet", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "fd01::1",
+				Prefix:  120,
+				Addresses: []string{
+					"fd01::1",
+					"fd01::3-fd01::4",
+					"fd01::6/127",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("fd01::1"))).To(BeFalse())
+			Expect(IPSetCount(ipSet)).To(Equal(4))
+		})
+		Context("when the AllocateReservedIPAddresses flag is true", func() {
+			var ipSet *netipx.IPSet
+			BeforeEach(func() {
+				spec := &v1alpha2.InClusterIPPoolSpec{
+					Gateway:                     "fd01::1",
+					Prefix:                      120,
+					AllocateReservedIPAddresses: true,
+					Addresses: []string{
+						"fd01::0",
+						"fd01::1",
+						"fd01::3-fd01::4",
+						"fd01::6/127",
+						"fd01::ffff:ffff",
+					},
+				}
+				var err error
+				ipSet, err = PoolSpecToIPSet(spec)
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("includes the anycast address in the IPSet", func() {
+				Expect(ipSet.Contains(mustParse("fd01::0"))).To(BeTrue())
+				Expect(ipSet.Contains(mustParse("fd01::3"))).To(BeTrue())
+				Expect(ipSet.Contains(mustParse("fd01::4"))).To(BeTrue())
+				Expect(ipSet.Contains(mustParse("fd01::6"))).To(BeTrue())
+				Expect(ipSet.Contains(mustParse("fd01::7"))).To(BeTrue())
+				Expect(ipSet.Contains(mustParse("fd01::ffff:ffff"))).To(BeTrue())
+				Expect(IPSetCount(ipSet)).To(Equal(6))
+			})
+			It("never allocates the gateway address when set", func() {
+				Expect(ipSet.Contains(mustParse("fd01::1"))).To(BeFalse())
+			})
+		})
+	})
+})
 
 var _ = Describe("AddressesToIPSet", func() {
 	It("converts the slice to an IPSet", func() {
