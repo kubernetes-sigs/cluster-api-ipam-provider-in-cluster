@@ -23,9 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -68,19 +66,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 				Expect(genericPool.PoolStatus().Addresses.Free).To(Equal(expectedTotal))
 
 				for i := 0; i < expectedUsed; i++ {
-					claim := ipamv1.IPAddressClaim{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("test%d", i),
-							Namespace: namespace,
-						},
-						Spec: ipamv1.IPAddressClaimSpec{
-							PoolRef: corev1.TypedLocalObjectReference{
-								APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
-								Kind:     poolType,
-								Name:     genericPool.GetName(),
-							},
-						},
-					}
+					claim := newClaim(fmt.Sprintf("test%d", i), namespace, poolType, genericPool.GetName())
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 					createdClaimNames = append(createdClaimNames, claim.Name)
 				}
@@ -155,19 +141,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 				Expect(k8sClient.Create(context.Background(), genericPool)).To(Succeed())
 
 				for i := 0; i < numClaims; i++ {
-					claim := ipamv1.IPAddressClaim{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("test%d", i),
-							Namespace: namespace,
-						},
-						Spec: ipamv1.IPAddressClaimSpec{
-							PoolRef: corev1.TypedLocalObjectReference{
-								APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
-								Kind:     poolType,
-								Name:     genericPool.GetName(),
-							},
-						},
-					}
+					claim := newClaim(fmt.Sprintf("test%d", i), namespace, poolType, genericPool.GetName())
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 					createdClaimNames = append(createdClaimNames, claim.Name)
 				}
@@ -212,19 +186,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 			Expect(k8sClient.Create(context.Background(), pool)).To(Succeed())
 			Eventually(Get(pool)).Should(Succeed())
 
-			claim := ipamv1.IPAddressClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "finalizer-pool-test",
-					Namespace: namespace,
-				},
-				Spec: ipamv1.IPAddressClaimSpec{
-					PoolRef: corev1.TypedLocalObjectReference{
-						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
-						Kind:     poolType,
-						Name:     pool.GetName(),
-					},
-				},
-			}
+			claim := newClaim("finalizer-pool-test", namespace, poolType, pool.GetName())
 
 			Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
