@@ -42,7 +42,7 @@ type InClusterIPPoolSpec struct {
 	// +optional
 	AllocateReservedIPAddresses bool `json:"allocateReservedIPAddresses,omitempty"`
 
-	// ExcludedAddresses contains a list of IP addresses, which will be excluded from
+	// ExcludedAddresses is a list of IP addresses, which will be excluded from
 	// the set of assignable IP addresses.
 	ExcludedAddresses []string `json:"excludedAddresses,omitempty"`
 }
