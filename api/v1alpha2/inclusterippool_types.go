@@ -44,6 +44,7 @@ type InClusterIPPoolSpec struct {
 
 	// ExcludedAddresses is a list of IP addresses, which will be excluded from
 	// the set of assignable IP addresses.
+	// +optional
 	ExcludedAddresses []string `json:"excludedAddresses,omitempty"`
 }
 
