@@ -241,6 +241,33 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 			},
 		},
 		{
+			name: "addresses with prefix and excluded addresses",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.25",
+					"10.0.0.26",
+					"10.0.0.27",
+				},
+				Prefix: 28,
+				ExcludedAddresses: []string{
+					"10.0.0.23",
+					"10.0.0.24",
+				},
+			},
+			expect: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.25",
+					"10.0.0.26",
+					"10.0.0.27",
+				},
+				Prefix: 28,
+				ExcludedAddresses: []string{
+					"10.0.0.23",
+					"10.0.0.24",
+				},
+			},
+		},
+		{
 			name: "IPv6 addresses with gateway and prefix",
 			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
@@ -278,6 +305,35 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 					"fe01::1:1/126",
 				},
 				Prefix: 28,
+			},
+		},
+		{
+			name: "IPv6 addresses and prefix and excluded addresses",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"fe01::2",
+					"fe01::3-fe01::5",
+					"fe01::1:1/126",
+				},
+				Prefix: 28,
+				ExcludedAddresses: []string{
+					"fe01::4",
+					"fe01::6-fe01::8",
+					"fe01::1:10/126",
+				},
+			},
+			expect: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"fe01::2",
+					"fe01::3-fe01::5",
+					"fe01::1:1/126",
+				},
+				Prefix: 28,
+				ExcludedAddresses: []string{
+					"fe01::4",
+					"fe01::6-fe01::8",
+					"fe01::1:10/126",
+				},
 			},
 		},
 	}
@@ -537,6 +593,22 @@ func TestInvalidScenarios(t *testing.T) {
 				},
 				Prefix:  24,
 				Gateway: "10.0.0.1",
+			},
+			expectedError: "provided addresses are of mixed IP families",
+		},
+		{
+			testcase: "Excluded addresses are using mismatched IP families",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.2-10.0.0.250",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+				ExcludedAddresses: []string{
+					"fd00::1",
+					"10.0.0.4",
+				},
 			},
 			expectedError: "provided addresses are of mixed IP families",
 		},

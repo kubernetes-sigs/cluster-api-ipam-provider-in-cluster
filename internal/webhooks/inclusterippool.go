@@ -91,11 +91,11 @@ func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Ob
 func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
 	newPool, ok := newObj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", newObj))
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", newObj))
 	}
 	oldPool, ok := oldObj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", oldObj))
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", oldObj))
 	}
 
 	err := webhook.validate(oldPool, newPool)
@@ -135,7 +135,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 	}
 
 	if outOfRange := outOfRangeIPSet.Ranges(); len(outOfRange) > 0 {
-		return apierrors.NewBadRequest(fmt.Sprintf("pool addresses does not contain allocated addresses: %v", outOfRange))
+		return apierrors.NewBadRequest(fmt.Sprintf("pool addresses do not contain allocated addresses: %v", outOfRange))
 	}
 
 	return nil
@@ -145,7 +145,7 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 func (webhook *InClusterIPPool) ValidateDelete(ctx context.Context, obj runtime.Object) (reterr error) {
 	pool, ok := obj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", obj))
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", obj))
 	}
 
 	if _, ok := pool.GetAnnotations()[SkipValidateDeleteWebhookAnnotation]; ok {
@@ -210,6 +210,21 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 		if gateway.Is6() && hasIPv4Addr || gateway.Is4() && hasIPv6Addr {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.PoolSpec().Gateway, "provided gateway and addresses are of mixed IP families"))
 		}
+	}
+
+	for _, address := range newPool.PoolSpec().ExcludedAddresses {
+		ipSet, err := poolutil.AddressToIPSet(address)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "excludedAddresses"), address, "provided address is not a valid IP, range, nor CIDR"))
+			continue
+		}
+		from := ipSet.Ranges()[0].From()
+		hasIPv4Addr = hasIPv4Addr || from.Is4()
+		hasIPv6Addr = hasIPv6Addr || from.Is6()
+	}
+
+	if hasIPv4Addr && hasIPv6Addr {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "excludedAddresses"), newPool.PoolSpec().ExcludedAddresses, "provided addresses are of mixed IP families"))
 	}
 
 	if len(allErrs) == 0 {

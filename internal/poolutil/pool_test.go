@@ -128,6 +128,69 @@ var _ = Describe("PoolSpecToIPSet", func() {
 			Expect(ipSet.Contains(mustParse("192.168.0.1"))).To(BeFalse())
 		})
 	})
+	Context("With excluded ipv4 addresses", func() {
+		It("excludes ip addresses from the address pool", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "192.168.0.1",
+				Prefix:  24,
+				Addresses: []string{
+					"192.168.0.0-192.168.0.10",
+				},
+				ExcludedAddresses: []string{
+					"192.168.0.5",
+					"192.168.0.6",
+					"192.168.0.7",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.Contains(mustParse("192.168.0.2"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.3"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.4"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.5"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.0.6"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.0.7"))).To(BeFalse())
+			Expect(ipSet.Contains(mustParse("192.168.0.8"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.9"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.10"))).To(BeTrue())
+			Expect(ipSet.Contains(mustParse("192.168.0.11"))).To(BeFalse())
+			Expect(IPSetCount(ipSet)).To(Equal(6))
+		})
+		It("excludes ip subnet from the address pool", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "192.168.0.1",
+				Prefix:  24,
+				Addresses: []string{
+					"192.168.0.0/24",
+				},
+				ExcludedAddresses: []string{
+					"192.168.0.128/25",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.ContainsRange(netipx.MustParseIPRange("192.168.0.2-192.168.0.127"))).To(BeTrue())
+			Expect(ipSet.ContainsRange(netipx.MustParseIPRange("192.168.0.128-192.168.0.255"))).To(BeFalse())
+			Expect(IPSetCount(ipSet)).To(Equal(126))
+		})
+		It("excludes ip range from the address pool", func() {
+			spec := &v1alpha2.InClusterIPPoolSpec{
+				Gateway: "192.168.0.1",
+				Prefix:  24,
+				Addresses: []string{
+					"192.168.0.0/24",
+				},
+				ExcludedAddresses: []string{
+					"192.168.0.2-192.168.0.20",
+				},
+			}
+			ipSet, err := PoolSpecToIPSet(spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipSet.ContainsRange(netipx.MustParseIPRange("192.168.0.2-192.168.0.20"))).To(BeFalse())
+			Expect(ipSet.ContainsRange(netipx.MustParseIPRange("192.168.0.21-192.168.0.254"))).To(BeTrue())
+			Expect(IPSetCount(ipSet)).To(Equal(234))
+		})
+	})
 
 	Context("with IPv6 addresses", func() {
 		It("converts a pool spec to a set", func() {

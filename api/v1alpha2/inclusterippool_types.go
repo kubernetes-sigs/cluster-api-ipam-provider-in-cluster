@@ -41,6 +41,10 @@ type InClusterIPPoolSpec struct {
 	// subnet) when IPv6.
 	// +optional
 	AllocateReservedIPAddresses bool `json:"allocateReservedIPAddresses,omitempty"`
+
+	// ExcludedAddresses contains a list of IP addresses, which will be excluded from
+	// the set of assignable IP addresses.
+	ExcludedAddresses []string `json:"excludedAddresses,omitempty"`
 }
 
 // InClusterIPPoolStatus defines the observed state of InClusterIPPool.
