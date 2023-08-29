@@ -284,7 +284,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 		})
 
-		When("the referenced namespaced pool exists and has exlcuded ip addresses", func() {
+		When("the referenced namespaced pool exists and has excluded ip addresses", func() {
 			const poolName = "test-pool"
 
 			BeforeEach(func() {
