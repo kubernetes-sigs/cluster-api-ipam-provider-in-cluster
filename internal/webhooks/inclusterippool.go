@@ -212,6 +212,7 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 		}
 	}
 
+	excludedHasIPv4Addr, excludedHasIPv6Addr := false, false
 	for _, address := range newPool.PoolSpec().ExcludedAddresses {
 		ipSet, err := poolutil.AddressToIPSet(address)
 		if err != nil {
@@ -219,12 +220,16 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 			continue
 		}
 		from := ipSet.Ranges()[0].From()
-		hasIPv4Addr = hasIPv4Addr || from.Is4()
-		hasIPv6Addr = hasIPv6Addr || from.Is6()
+		excludedHasIPv4Addr = excludedHasIPv4Addr || from.Is4()
+		excludedHasIPv6Addr = excludedHasIPv6Addr || from.Is6()
 	}
 
-	if hasIPv4Addr && hasIPv6Addr {
+	if excludedHasIPv4Addr && excludedHasIPv6Addr {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "excludedAddresses"), newPool.PoolSpec().ExcludedAddresses, "provided addresses are of mixed IP families"))
+	}
+
+	if (hasIPv4Addr && excludedHasIPv6Addr) || (hasIPv6Addr && excludedHasIPv4Addr) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "excludedAddresses"), newPool.PoolSpec().ExcludedAddresses, "addresses and excluded addresses are of mixed IP families"))
 	}
 
 	if len(allErrs) == 0 {

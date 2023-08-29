@@ -612,6 +612,21 @@ func TestInvalidScenarios(t *testing.T) {
 			},
 			expectedError: "provided addresses are of mixed IP families",
 		},
+		{
+			testcase: "Addresses and excluded addresses are using mismatched IP families",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.1.0",
+					"10.0.0.2-10.0.0.250",
+				},
+				Prefix:  24,
+				Gateway: "10.0.0.1",
+				ExcludedAddresses: []string{
+					"fd00::1",
+				},
+			},
+			expectedError: "addresses and excluded addresses are of mixed IP families",
+		},
 	}
 	for _, tt := range tests {
 		namespacedPool := &v1alpha2.InClusterIPPool{Spec: tt.spec}
