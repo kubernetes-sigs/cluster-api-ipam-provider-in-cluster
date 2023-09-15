@@ -181,6 +181,12 @@ spec:
                   IPv4. The provider will allocate the anycast address address (the
                   first address in the inferred subnet) when IPv6.
                 type: boolean
+              excludedAddresses:
+                description: ExcludedAddresses is a list of IP addresses, which will
+                  be excluded from the set of assignable IP addresses.
+                items:
+                  type: string
+                type: array
               gateway:
                 description: Gateway
                 type: string

@@ -212,7 +212,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							"10.0.1.0", // reserved network addr
 							"10.0.1.1", // reserved gateway addr
 							"10.0.1.2",
-							"10.0.1.255", // rerved broadcast addr
+							"10.0.1.255", // reserved broadcast addr
 						},
 					},
 				}
@@ -281,6 +281,70 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(1)))
 
+			})
+		})
+
+		When("the referenced namespaced pool exists and has excluded ip addresses", func() {
+			const (
+				poolName = "test-pool-excluded"
+				first    = "test-excluded-first"
+				second   = "test-excluded-second"
+				third    = "test-excluded-third"
+			)
+
+			BeforeEach(func() {
+				pool := v1alpha2.InClusterIPPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      poolName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha2.InClusterIPPoolSpec{
+						Prefix:  24,
+						Gateway: "10.1.1.1",
+						Addresses: []string{
+							"10.1.1.0/24",
+						},
+						ExcludedAddresses: []string{
+							"10.1.1.2-10.1.1.5",
+							"10.1.1.7",
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &pool)).To(Succeed())
+				Eventually(Get(&pool)).Should(Succeed())
+			})
+
+			AfterEach(func() {
+				deleteClaim(first, namespace)
+				deleteClaim(second, namespace)
+				deleteClaim(third, namespace)
+				deleteNamespacedPool(poolName, namespace)
+			})
+
+			It("should not allocate excluded ip addresses", func() {
+				claim := newClaim(first, namespace, "InClusterIPPool", poolName)
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+
+				Eventually(findAddress(first, namespace)).
+					WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Spec.Address", "10.1.1.6"),
+				)
+
+				claim1 := newClaim(second, namespace, "InClusterIPPool", poolName)
+				Expect(k8sClient.Create(context.Background(), &claim1)).To(Succeed())
+
+				Eventually(findAddress(second, namespace)).
+					WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Spec.Address", "10.1.1.8"),
+				)
+
+				claim2 := newClaim(third, namespace, "InClusterIPPool", poolName)
+
+				Expect(k8sClient.Create(context.Background(), &claim2)).To(Succeed())
+				Eventually(findAddress(third, namespace)).
+					WithTimeout(time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Spec.Address", "10.1.1.9"),
+				)
 			})
 		})
 

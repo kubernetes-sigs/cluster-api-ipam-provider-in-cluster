@@ -111,6 +111,15 @@ func PoolSpecToIPSet(poolSpec *v1alpha2.InClusterIPPoolSpec) (*netipx.IPSet, err
 	builder := &netipx.IPSetBuilder{}
 	builder.AddSet(addressesIPSet)
 
+	if len(poolSpec.ExcludedAddresses) > 0 {
+		excludedAddressesIPSet, err := AddressesToIPSet(poolSpec.ExcludedAddresses)
+		if err != nil {
+			return nil, err
+		}
+
+		builder.RemoveSet(excludedAddressesIPSet)
+	}
+
 	if !poolSpec.AllocateReservedIPAddresses {
 		subnet := netip.PrefixFrom(addressesIPSet.Ranges()[0].From(), poolSpec.Prefix) // safe because of webhook validation
 		subnetRange := netipx.RangeOfPrefix(subnet)
