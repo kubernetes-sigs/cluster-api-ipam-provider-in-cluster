@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/gomega v1.28.0
 	github.com/pkg/errors v0.9.1
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
 	k8s.io/api v0.26.1
