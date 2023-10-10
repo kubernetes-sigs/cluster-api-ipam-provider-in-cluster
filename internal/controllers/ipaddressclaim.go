@@ -42,7 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
@@ -87,7 +86,7 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		// unpaused so that a request can be queued to re-reconcile the
 		// IPAddressClaim.
 		Watches(
-			&source.Kind{Type: &clusterv1.Cluster{}},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(r.clusterToIPClaims),
 			builder.WithPredicates(predicate.Funcs{
 				UpdateFunc: func(e event.UpdateEvent) bool {
@@ -106,12 +105,12 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			MaxConcurrentReconciles: 1,
 		}).
 		Watches(
-			&source.Kind{Type: &v1alpha2.InClusterIPPool{}},
+			&v1alpha2.InClusterIPPool{},
 			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("InClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
 		Watches(
-			&source.Kind{Type: &v1alpha2.GlobalInClusterIPPool{}},
+			&v1alpha2.GlobalInClusterIPPool{},
 			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
@@ -125,8 +124,8 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		Complete(r)
 }
 
-func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) func(client.Object) []reconcile.Request {
-	return func(a client.Object) []reconcile.Request {
+func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) handler.MapFunc {
+	return func(_ context.Context, a client.Object) []reconcile.Request {
 		pool := a.(pooltypes.GenericInClusterPool)
 		requests := []reconcile.Request{}
 		claims := &ipamv1.IPAddressClaimList{}
@@ -356,7 +355,7 @@ func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim,
 	return &address, nil
 }
 
-func (r *IPAddressClaimReconciler) clusterToIPClaims(a client.Object) []reconcile.Request {
+func (r *IPAddressClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 	vms := &ipamv1.IPAddressClaimList{}
 	err := r.Client.List(context.Background(), vms, client.MatchingLabels(
