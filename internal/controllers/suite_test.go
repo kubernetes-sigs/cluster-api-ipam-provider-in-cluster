@@ -101,7 +101,7 @@ var _ = BeforeSuite(func() {
 		(&ipamutil.ClaimReconciler{
 			Client:   mgr.GetClient(),
 			Scheme:   mgr.GetScheme(),
-			Provider: &InClusterProviderIntegration{},
+			Provider: &InClusterProviderAdapter{Client: mgr.GetClient()},
 		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 

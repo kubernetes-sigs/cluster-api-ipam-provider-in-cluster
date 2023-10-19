@@ -27,7 +27,7 @@ import (
 	v1alpha2 "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 )
 
-func Convert_v1alpha1_InClusterIPPoolSpec_To_v1alpha2_InClusterIPPoolSpec(in *InClusterIPPoolSpec, out *v1alpha2.InClusterIPPoolSpec, scope conversion.Scope) error {
+func Convert_v1alpha1_InClusterIPPoolSpec_To_v1alpha2_InClusterIPPoolSpec(in *InClusterIPPoolSpec, out *v1alpha2.InClusterIPPoolSpec, _ conversion.Scope) error {
 	out.Gateway = in.Gateway
 	out.Prefix = in.Prefix
 	out.Addresses = in.Addresses

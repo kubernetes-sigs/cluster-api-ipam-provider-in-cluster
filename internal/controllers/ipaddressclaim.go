@@ -19,12 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 
 	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -39,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/poolutil"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
@@ -59,12 +58,13 @@ type genericInClusterPool interface {
 	PoolSpec() *v1alpha2.InClusterIPPoolSpec
 }
 
-type InClusterProviderIntegration struct {
+// InClusterProviderAdapter is used as middle layer for provider integration.
+type InClusterProviderAdapter struct {
 	Client           client.Client
 	WatchFilterValue string
 }
 
-var _ ipamutil.ProviderIntegration = &InClusterProviderIntegration{}
+var _ ipamutil.ProviderAdapter = &InClusterProviderAdapter{}
 
 // IPAddressClaimHandler reconciles a InClusterIPPool object.
 type IPAddressClaimHandler struct {
@@ -76,7 +76,7 @@ type IPAddressClaimHandler struct {
 var _ ipamutil.ClaimHandler = &IPAddressClaimHandler{}
 
 // SetupWithManager sets up the controller with the Manager.
-func (i *InClusterProviderIntegration) SetupWithManager(ctx context.Context, b *ctrl.Builder) error {
+func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.Builder) error {
 	b.
 		For(
 			&ipamv1.IPAddressClaim{},
@@ -133,7 +133,7 @@ func (i *InClusterProviderIntegration) SetupWithManager(ctx context.Context, b *
 	return nil
 }
 
-func (i *InClusterProviderIntegration) inClusterIPPoolToIPClaims(kind string) func(context.Context, client.Object) []reconcile.Request {
+func (i *InClusterProviderAdapter) inClusterIPPoolToIPClaims(kind string) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, a client.Object) []reconcile.Request {
 		pool := a.(pooltypes.GenericInClusterPool)
 		requests := []reconcile.Request{}
@@ -164,7 +164,7 @@ func (i *InClusterProviderIntegration) inClusterIPPoolToIPClaims(kind string) fu
 	}
 }
 
-func (i *InClusterProviderIntegration) clusterToIPClaims(ctx context.Context, a client.Object) []reconcile.Request {
+func (i *InClusterProviderAdapter) clusterToIPClaims(ctx context.Context, a client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 	vms := &ipamv1.IPAddressClaimList{}
 	err := i.Client.List(context.Background(), vms, client.MatchingLabels(
@@ -188,7 +188,7 @@ func (i *InClusterProviderIntegration) clusterToIPClaims(ctx context.Context, a 
 }
 
 // ClaimHandlerFor returns a claim handler for a specific claim.
-func (i *InClusterProviderIntegration) ClaimHandlerFor(_ client.Client, claim *ipamv1.IPAddressClaim) ipamutil.ClaimHandler {
+func (i *InClusterProviderAdapter) ClaimHandlerFor(_ client.Client, claim *ipamv1.IPAddressClaim) ipamutil.ClaimHandler {
 	return &IPAddressClaimHandler{
 		Client: i.Client,
 		claim:  claim,
@@ -210,16 +210,17 @@ func (i *InClusterProviderIntegration) ClaimHandlerFor(_ client.Client, claim *i
 // FetchPool fetches the (Global)InClusterIPPool.
 func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (*ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+
 	if h.claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
-		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil && !apierrors.IsNotFound(err) {
+		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pool")
 		}
 		h.pool = icippool
 	} else if h.claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		gicippool := &v1alpha2.GlobalInClusterIPPool{}
-		if err := h.Client.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil && !apierrors.IsNotFound(err) {
-			return nil, errors.Wrap(err, "failed to fetch pool")
+		if err := h.Client.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil {
+			return nil, err
 		}
 		h.pool = gicippool
 	}
@@ -241,7 +242,7 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 	}
 
 	allocated := slices.ContainsFunc(addressesInUse, func(a ipamv1.IPAddress) bool {
-		return a.Name == address.Name
+		return a.Name == address.Name && a.Namespace == address.Namespace
 	})
 
 	if !allocated {

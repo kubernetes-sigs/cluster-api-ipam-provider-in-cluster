@@ -114,7 +114,7 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		WatchFilterValue: watchFilter,
-		Provider: &controllers.InClusterProviderIntegration{
+		Provider: &controllers.InClusterProviderAdapter{
 			Client:           mgr.GetClient(),
 			WatchFilterValue: watchFilter,
 		},

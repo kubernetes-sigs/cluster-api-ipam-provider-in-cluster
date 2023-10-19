@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-z	"time"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,6 +32,7 @@ z	"time"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
+	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/ipamutil"
 )
 
 var IgnoreUIDsOnIPAddress = IgnorePaths{
@@ -971,7 +972,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 
 			When("a claim is deleted", func() {
-				const poolName = "paused-delete-claim-pool"
+				const poolName = "paused-delete-claim-pool" // #nosec G101
 				var pool v1alpha2.InClusterIPPool
 
 				BeforeEach(func() {
