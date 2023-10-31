@@ -8,3 +8,4 @@ aliases:
   cluster-api-ipam-provider-in-cluster-reviewers:
     - schrej
     - srm09
+    - rikatz
