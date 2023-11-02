@@ -65,7 +65,7 @@ spec:
   gateway: 10.0.0.1
 ```
 
-Be aware that the prefix needs to cover all addresses that are part of the pool. The first network in the `addresses` list and the `prefix` field, which specifies the length of the prefix, is used to determine the prefix. In this case, `10.0.1.0/24` in the `addresses` list would lead to a validation error.
+Be aware that the prefix needs to cover all addresses that are part of the pool. The first network in the `addresses` list and the `prefix` field, which specifies the length of the prefix, is used to determine the prefix. In this case, `10.1.0.0/24` in the `addresses` list would lead to a validation error.
 
 The `gateway` will never be allocated. By default, addresses that are usually reserved will not be allocated either. For v4 networks this is the first (network) and last (broadcast) address within the prefix. In the example above that would be `10.0.0.0` and `10.0.3.255` (the latter not being in the network anyway). For v6 networks the first address is excluded.
 
