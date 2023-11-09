@@ -182,7 +182,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	return ctrl.Result{}, nil
 }
 
-func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) { //nolint:unparam
+func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) {
 	address := &ipamv1.IPAddress{}
 	namespacedName := types.NamespacedName{
 		Namespace: claim.Namespace,
