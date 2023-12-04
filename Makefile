@@ -14,7 +14,12 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-provider-in-cluster
-TAG ?= $(shell cat TAG)
+TAG ?= dev
+# PULL_BASE_REF is set by prow and contains the git ref for a build, e.g. branch name or tag
+RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
+
+ARCH ?= $(shell go env GOARCH)
+ALL_ARCH ?= amd64 arm arm64
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.26
@@ -96,11 +101,31 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: licenses-report ## Build docker image with the manager.
-	docker build -t ${IMG}:$(TAG) .
+	ARCH=$(ARCH) docker build --build-arg ARCH=$(ARCH)  -t $(IMG)-$(ARCH):$(TAG) .
+
+.PHONY: docker-build-all
+docker-build-all: $(addprefix docker-build-,$(ALL_ARCH))
+
+docker-build-%:
+	$(MAKE) ARCH=$* docker-build
+
+.PHONY: docker-push-all
+docker-push-all: $(addprefix docker-push-,$(ALL_ARCH)) docker-push-manifest
+
+docker-push-%:
+	$(MAKE) ARCH=$* docker-push
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}:$(TAG)
+	docker push $(IMG)-$(ARCH):$(TAG)
+
+docker-push-manifest:
+	docker manifest create --amend $(IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(IMG)\-&:$(TAG)~g")
+	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${IMG}:${TAG} ${IMG}-$${arch}:${TAG}; done
+	docker manifest push --purge $(IMG):$(TAG)
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
+	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
+
 
 ##@ Release
 
@@ -138,6 +163,13 @@ release-manifests: kustomize $(RELEASE_DIR)
 .PHONY: release-metadata
 release-metadata:
 	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+.PHONY: staging-images-release-alias-tag
+staging-images-release-alias-tag: ## Add the release alias tag to the last build tag
+	gcloud container images add-tag $(IMG):$(TAG) $(IMG):$(RELEASE_ALIAS_TAG)
+
+.PHONY: release-staging-images
+release-staging-images: docker-build-all docker-push-all staging-images-release-alias-tag
 
 licenses-report: go-licenses
 	rm -rf $(RELEASE_DIR)/licenses
