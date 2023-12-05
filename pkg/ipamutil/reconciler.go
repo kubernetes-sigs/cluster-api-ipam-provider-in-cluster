@@ -3,7 +3,6 @@ package ipamutil
 import (
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,8 +16,12 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	ctrlhandler "sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -54,7 +57,6 @@ type ClaimReconciler struct {
 
 // ProviderAdapter is an interface that must be implemented by the IPAM provider.
 type ProviderAdapter interface {
-	// SetupWithManager allows the integration to configure the controller.
 	// SetupWithManager will be called during the setup of the controller for the ClaimReconciler to allow the provider
 	// implementation to extend the controller configuration.
 	SetupWithManager(context.Context, *ctrl.Builder) error
@@ -78,7 +80,25 @@ type ClaimHandler interface {
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		// A Watch is added for the Cluster in the case that the Cluster is
+		// unpaused so that a request can be queued to re-reconcile the
+		// IPAddressClaim.
+		Watches(
+			&clusterv1.Cluster{},
+			ctrlhandler.EnqueueRequestsFromMapFunc(r.clusterToIPClaims),
+			builder.WithPredicates(predicate.Funcs{
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					oldCluster := e.ObjectOld.(*clusterv1.Cluster)
+					newCluster := e.ObjectNew.(*clusterv1.Cluster)
+					return annotations.IsPaused(oldCluster, oldCluster) && !annotations.IsPaused(newCluster, newCluster)
+				},
+				CreateFunc: func(e event.CreateEvent) bool {
+					cluster := e.Object.(*clusterv1.Cluster)
+					return !annotations.IsPaused(cluster, cluster)
+				},
+			}),
+		)
 
 	if err := r.Adapter.SetupWithManager(ctx, b); err != nil {
 		return err
@@ -228,6 +248,29 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 
 	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
 	return ctrl.Result{}, nil
+}
+
+func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {
+	requests := []reconcile.Request{}
+	claims := &ipamv1.IPAddressClaimList{}
+	err := r.Client.List(context.Background(), claims, client.MatchingLabels(
+		map[string]string{
+			clusterv1.ClusterNameLabel: a.GetName(),
+		},
+	))
+	if err != nil {
+		return requests
+	}
+	for _, c := range claims.Items {
+		r := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      c.Name,
+				Namespace: c.Namespace,
+			},
+		}
+		requests = append(requests, r)
+	}
+	return requests
 }
 
 func unwrapResult(res *ctrl.Result) ctrl.Result {

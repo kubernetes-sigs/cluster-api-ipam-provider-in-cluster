@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -78,38 +77,18 @@ var _ ipamutil.ClaimHandler = &IPAddressClaimHandler{}
 // SetupWithManager sets up the controller with the Manager.
 func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.Builder) error {
 	b.
-		For(
-			&ipamv1.IPAddressClaim{},
-			builder.WithPredicates(
-				predicate.Or(
-					ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-						Group: v1alpha2.GroupVersion.Group,
-						Kind:  inClusterIPPoolKind,
-					}),
-					ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-						Group: v1alpha2.GroupVersion.Group,
-						Kind:  globalInClusterIPPoolKind,
-					}),
-				),
-			)).
-		// A Watch is added for the Cluster in the case that the Cluster is
-		// unpaused so that a request can be queued to re-reconcile the
-		// IPAddressClaim.
-		Watches(
-			&clusterv1.Cluster{},
-			handler.EnqueueRequestsFromMapFunc(i.clusterToIPClaims),
-			builder.WithPredicates(predicate.Funcs{
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					oldCluster := e.ObjectOld.(*clusterv1.Cluster)
-					newCluster := e.ObjectNew.(*clusterv1.Cluster)
-					return annotations.IsPaused(oldCluster, oldCluster) && !annotations.IsPaused(newCluster, newCluster)
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					cluster := e.Object.(*clusterv1.Cluster)
-					return !annotations.IsPaused(cluster, cluster)
-				},
-			}),
-		).
+		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
+			predicate.Or(
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha2.GroupVersion.Group,
+					Kind:  inClusterIPPoolKind,
+				}),
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha2.GroupVersion.Group,
+					Kind:  globalInClusterIPPoolKind,
+				}),
+			),
+		)).
 		WithOptions(controller.Options{
 			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
 			MaxConcurrentReconciles: 1,
@@ -162,29 +141,6 @@ func (i *InClusterProviderAdapter) inClusterIPPoolToIPClaims(kind string) func(c
 		}
 		return requests
 	}
-}
-
-func (i *InClusterProviderAdapter) clusterToIPClaims(ctx context.Context, a client.Object) []reconcile.Request {
-	requests := []reconcile.Request{}
-	vms := &ipamv1.IPAddressClaimList{}
-	err := i.Client.List(context.Background(), vms, client.MatchingLabels(
-		map[string]string{
-			clusterv1.ClusterNameLabel: a.GetName(),
-		},
-	))
-	if err != nil {
-		return requests
-	}
-	for _, vm := range vms.Items {
-		r := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      vm.Name,
-				Namespace: vm.Namespace,
-			},
-		}
-		requests = append(requests, r)
-	}
-	return requests
 }
 
 // ClaimHandlerFor returns a claim handler for a specific claim.
