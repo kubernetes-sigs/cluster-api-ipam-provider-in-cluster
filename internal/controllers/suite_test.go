@@ -99,9 +99,9 @@ var _ = BeforeSuite(func() {
 
 	Expect(
 		(&ipamutil.ClaimReconciler{
-			Client:   mgr.GetClient(),
-			Scheme:   mgr.GetScheme(),
-			Provider: &InClusterProviderAdapter{Client: mgr.GetClient()},
+			Client:  mgr.GetClient(),
+			Scheme:  mgr.GetScheme(),
+			Adapter: &InClusterProviderAdapter{Client: mgr.GetClient()},
 		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 

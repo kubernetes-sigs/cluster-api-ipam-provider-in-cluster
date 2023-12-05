@@ -31,28 +31,47 @@ const (
 )
 
 // ClaimReconciler reconciles a IPAddressClaim object using a ProviderAdapter.
+// It can be used to implement custom IPAM providers without worrying about the basic lifecycle, pausing and owner
+// references, which should be the same or very similar for any provider.
+// The custom implementation for a specific provider is provided by implementing the ProviderAdapter interface. The
+// ClaimReconciler can then be used as follows, with controllers.InClusterProviderAdapter serving
+// as the provider implementation.
+//
+//	(&ipamutil.ClaimReconciler{
+//		Client:           mgr.GetClient(),
+//		Scheme:           mgr.GetScheme(),
+//		WatchFilterValue: watchFilter,
+//		Adapter: &controllers.InClusterProviderAdapter{},
+//	}).SetupWithManager(ctx, mgr)
 type ClaimReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
 	WatchFilterValue string
 
-	Provider ProviderAdapter
+	Adapter ProviderAdapter
 }
 
-// ProviderAdapter is an interface that must be implemented by an IPAM provider.
+// ProviderAdapter is an interface that must be implemented by the IPAM provider.
 type ProviderAdapter interface {
 	// SetupWithManager allows the integration to configure the controller.
+	// SetupWithManager will be called during the setup of the controller for the ClaimReconciler to allow the provider
+	// implementation to extend the controller configuration.
 	SetupWithManager(context.Context, *ctrl.Builder) error
-	// ClaimHandlerFor needs to return a ClaimHandler for the provider.
+	// ClaimHandlerFor is called during reconciliation to get a ClaimHandler for the reconciled [ipamv1.IPAddressClaim].
 	ClaimHandlerFor(client.Client, *ipamv1.IPAddressClaim) ClaimHandler
 }
 
 // ClaimHandler knows how to allocate and release IP addresses for a specific provider.
 type ClaimHandler interface {
+	// FetchPool is called to fetch the pool referenced by the claim. The pool needs to be stored by the handler.
 	FetchPool(ctx context.Context) (*ctrl.Result, error)
+	// EnsureAddress needs to make sure an ip address is allocated for the claim and the spec of the provided [ipamv1.IPAddress] is correct.
 	EnsureAddress(ctx context.Context, address *ipamv1.IPAddress) (*ctrl.Result, error)
+	// ReleaseAddress is called to release the ip address that was allocated for the claim.
 	ReleaseAddress() (*ctrl.Result, error)
+	// GetPool returns the pool that was retrieved with FetchPool.
+	// The ClaimReconciler will always call FetchPool before calling GetPool.
 	GetPool() client.Object
 }
 
@@ -61,7 +80,7 @@ func (r *ClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	b := ctrl.NewControllerManagedBy(mgr).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
 
-	if err := r.Provider.SetupWithManager(ctx, b); err != nil {
+	if err := r.Adapter.SetupWithManager(ctx, b); err != nil {
 		return err
 	}
 	return b.Complete(r)
@@ -80,6 +99,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		return ctrl.Result{}, err
 	}
 
+	// Check if the owning cluster is paused
 	if _, ok := claim.GetLabels()[clusterv1.ClusterNameLabel]; ok {
 		cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
 		if err != nil {
@@ -110,11 +130,10 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		}
 	}()
 
-	// Ensure the claim has a finalizer.
 	controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
 
 	// Create the provider handler and fetch the pool.
-	handler := r.Provider.ClaimHandlerFor(r.Client, claim)
+	handler := r.Adapter.ClaimHandlerFor(r.Client, claim)
 	if res, err := handler.FetchPool(ctx); err != nil || res != nil {
 		if apierrors.IsNotFound(err) {
 			err := errors.New("pool not found")
