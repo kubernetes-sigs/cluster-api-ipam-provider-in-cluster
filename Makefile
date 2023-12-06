@@ -19,7 +19,7 @@ TAG ?= dev
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 
 ARCH ?= $(shell go env GOARCH)
-ALL_ARCH ?= amd64 arm arm64
+ALL_ARCH ?= amd64 arm64
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.26
