@@ -10,4 +10,4 @@ config:
   - internal
   - pkg
   label: "IPAM-in-cluster"
-  manager-name: "caip-in-cluster-controller-manager"
+  manager-name: "capi-ipam-in-cluster-controller-manager"
