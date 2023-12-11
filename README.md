@@ -20,7 +20,7 @@ This provider comes with clusterctl support. Since it's not added to the built-i
 ```yaml
 providers:
   - name: in-cluster
-    url: https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/ipam-components.yaml
+    url: https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/download/v0.1.0-alpha.3/ipam-components.yaml
     type: IPAMProvider
 ```
 
