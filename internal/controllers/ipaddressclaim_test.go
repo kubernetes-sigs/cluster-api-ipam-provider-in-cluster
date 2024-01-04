@@ -24,9 +24,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
@@ -122,16 +122,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               poolName,
 							},
@@ -142,7 +142,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -237,16 +237,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               poolName,
 							},
@@ -257,7 +257,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -280,7 +280,6 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Consistently(ObjectList(&addresses)).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(1)))
-
 			})
 		})
 
@@ -420,16 +419,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               poolName,
 							},
@@ -440,7 +439,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -495,16 +494,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "GlobalInClusterIPPool",
 								Name:               poolName,
 							},
@@ -515,7 +514,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
 							Name:     poolName,
 						},
@@ -532,16 +531,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test-second-namespace",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "GlobalInClusterIPPool",
 								Name:               poolName,
 							},
@@ -552,7 +551,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test-second-namespace",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
 							Name:     poolName,
 						},
@@ -606,7 +605,6 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Consistently(ObjectList(&addresses)).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
-
 			})
 		})
 
@@ -713,16 +711,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test-1",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               commonPoolName,
 							},
@@ -733,7 +731,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test-1",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     commonPoolName,
 						},
@@ -750,16 +748,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test-2",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               commonPoolName,
 							},
@@ -770,7 +768,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test-2",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     commonPoolName,
 						},
@@ -842,16 +840,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test-1",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "InClusterIPPool",
 								Name:               commonPoolName,
 							},
@@ -862,7 +860,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test-1",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     commonPoolName,
 						},
@@ -879,16 +877,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Finalizers: []string{ProtectAddressFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(true),
+								APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(true),
 								Kind:               "IPAddressClaim",
 								Name:               "test-2",
 							},
 							{
 								APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-								BlockOwnerDeletion: pointer.Bool(true),
-								Controller:         pointer.Bool(false),
+								BlockOwnerDeletion: ptr.To(true),
+								Controller:         ptr.To(false),
 								Kind:               "GlobalInClusterIPPool",
 								Name:               commonPoolName,
 							},
@@ -899,7 +897,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							Name: "test-2",
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "GlobalInClusterIPPool",
 							Name:     commonPoolName,
 						},
@@ -1064,7 +1062,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Name: "test",
 				},
 				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+					APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 					Kind:     "InClusterIPPool",
 					Name:     poolName,
 				},
@@ -1093,16 +1091,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Finalizers: []string{ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(true),
+							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(true),
 							Kind:               "IPAddressClaim",
 							Name:               "test",
 						},
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(false),
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(false),
 							Kind:               "InClusterIPPool",
 							Name:               poolName,
 						},
@@ -1147,7 +1145,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Name: "test",
 				},
 				PoolRef: corev1.TypedLocalObjectReference{
-					APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+					APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 					Kind:     "InClusterIPPool",
 					Name:     poolName,
 				},
@@ -1189,16 +1187,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 							UID:        "abc-dummy-123",
 						},
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(true),
+							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(true),
 							Kind:               "IPAddressClaim",
 							Name:               "test",
 						},
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(false),
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(false),
 							Kind:               "InClusterIPPool",
 							Name:               poolName,
 						},
@@ -1250,16 +1248,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Finalizers: []string{ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(true),
+							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(true),
 							Kind:               "IPAddressClaim",
 							Name:               "test",
 						},
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(false),
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(false),
 							Kind:               "GlobalInClusterIPPool",
 							Name:               poolName,
 						},
@@ -1270,7 +1268,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Name: "test",
 					},
 					PoolRef: corev1.TypedLocalObjectReference{
-						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+						APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 						Kind:     "GlobalInClusterIPPool",
 						Name:     poolName,
 					},
@@ -1287,16 +1285,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Finalizers: []string{ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(true),
+							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(true),
 							Kind:               "IPAddressClaim",
 							Name:               "test",
 						},
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(false),
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(false),
 							Kind:               "GlobalInClusterIPPool",
 							Name:               poolName,
 						},
@@ -1307,7 +1305,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Name: "test",
 					},
 					PoolRef: corev1.TypedLocalObjectReference{
-						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+						APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 						Kind:     "GlobalInClusterIPPool",
 						Name:     poolName,
 					},
@@ -1337,9 +1335,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			poolName    = "test-pool"
 		)
 
-		var (
-			cluster clusterv1.Cluster
-		)
+		var cluster clusterv1.Cluster
 
 		BeforeEach(func() {
 			pool := v1alpha2.InClusterIPPool{
@@ -1375,7 +1371,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -1413,7 +1409,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -1465,7 +1461,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -1508,7 +1504,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -1585,7 +1581,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
 							Name:     poolName,
 						},
@@ -1682,16 +1678,16 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Finalizers: []string{ProtectAddressFinalizer},
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha1",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(true),
+							APIVersion:         "ipam.cluster.x-k8s.io/v1beta1",
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(true),
 							Kind:               "IPAddressClaim",
 							Name:               "test",
 						},
 						{
 							APIVersion:         "ipam.cluster.x-k8s.io/v1alpha2",
-							BlockOwnerDeletion: pointer.Bool(true),
-							Controller:         pointer.Bool(false),
+							BlockOwnerDeletion: ptr.To(true),
+							Controller:         ptr.To(false),
 							Kind:               "InClusterIPPool",
 							Name:               poolName,
 						},
@@ -1702,7 +1698,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 						Name: "test",
 					},
 					PoolRef: corev1.TypedLocalObjectReference{
-						APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+						APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 						Kind:     "InClusterIPPool",
 						Name:     poolName,
 					},

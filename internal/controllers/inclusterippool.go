@@ -26,15 +26,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/utils/pointer"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/poolutil"
@@ -56,15 +55,16 @@ type InClusterIPPoolReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *InClusterIPPoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *InClusterIPPoolReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha2.InClusterIPPool{}).
-		Watches(&source.Kind{Type: &ipamv1.IPAddress{}},
+		Watches(
+			&ipamv1.IPAddress{},
 			handler.EnqueueRequestsFromMapFunc(r.ipAddressToInClusterIPPool)).
 		Complete(r)
 }
 
-func (r *InClusterIPPoolReconciler) ipAddressToInClusterIPPool(clientObj client.Object) []reconcile.Request {
+func (r *InClusterIPPoolReconciler) ipAddressToInClusterIPPool(_ context.Context, clientObj client.Object) []reconcile.Request {
 	ipAddress, ok := clientObj.(*ipamv1.IPAddress)
 	if !ok {
 		return nil
@@ -91,15 +91,16 @@ type GlobalInClusterIPPoolReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GlobalInClusterIPPoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *GlobalInClusterIPPoolReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha2.GlobalInClusterIPPool{}).
-		Watches(&source.Kind{Type: &ipamv1.IPAddress{}},
+		Watches(
+			&ipamv1.IPAddress{},
 			handler.EnqueueRequestsFromMapFunc(r.ipAddressToGlobalInClusterIPPool)).
 		Complete(r)
 }
 
-func (r *GlobalInClusterIPPoolReconciler) ipAddressToGlobalInClusterIPPool(clientObj client.Object) []reconcile.Request {
+func (r *GlobalInClusterIPPoolReconciler) ipAddressToGlobalInClusterIPPool(_ context.Context, clientObj client.Object) []reconcile.Request {
 	ipAddress, ok := clientObj.(*ipamv1.IPAddress)
 	if !ok {
 		return nil
@@ -174,7 +175,7 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 	}()
 
 	poolTypeRef := corev1.TypedLocalObjectReference{
-		APIGroup: pointer.String(v1alpha2.GroupVersion.Group),
+		APIGroup: ptr.To(v1alpha2.GroupVersion.Group),
 		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     pool.GetName(),
 	}
