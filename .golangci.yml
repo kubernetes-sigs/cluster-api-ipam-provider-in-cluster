@@ -4,8 +4,6 @@ linters:
   - asciicheck
   - bodyclose
   - containedctx
-  - deadcode
-  - depguard
   - dogsled
   - errcheck
   - exportloopref
@@ -19,7 +17,6 @@ linters:
   - gosec
   - gosimple
   - govet
-  - ifshort
   - importas
   - ineffassign
   - misspell
@@ -32,14 +29,12 @@ linters:
   - revive
   - rowserrcheck
   - staticcheck
-  - structcheck
   - stylecheck
   - thelper
   - typecheck
   - unconvert
   - unparam
   - unused
-  - varcheck
   - whitespace
 
 linters-settings:
@@ -214,6 +209,7 @@ run:
   skip-files:
   - "zz_generated.*\\.go$"
   - "vendored_openapi\\.go$"
+  - "api/.*/conversion\\.go$"
   skip-dirs:
   - third_party
   allow-parallel-runners: true

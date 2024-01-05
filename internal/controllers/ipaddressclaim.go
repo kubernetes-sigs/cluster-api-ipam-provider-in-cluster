@@ -258,7 +258,7 @@ func (r *IPAddressClaimReconciler) findPool(ctx context.Context, claim *ipamv1.I
 	return nil, fmt.Errorf("unknown pool type: %s", claim.Spec.PoolRef.Kind)
 }
 
-func (r *IPAddressClaimReconciler) reconcileNormal(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcileNormal(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool) (ctrl.Result, error) { //nolint:unparam
 	log := ctrl.LoggerFrom(ctx).WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
 
 	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, pool.GetNamespace(), claim.Spec.PoolRef)
@@ -302,7 +302,7 @@ func (r *IPAddressClaimReconciler) reconcileNormal(ctx context.Context, claim *i
 	return ctrl.Result{}, nil
 }
 
-func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) {
+func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) { //nolint:unparam
 	address := &ipamv1.IPAddress{}
 	namespacedName := types.NamespacedName{
 		Namespace: claim.Namespace,
