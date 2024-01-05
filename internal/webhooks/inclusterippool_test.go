@@ -24,10 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/index"
@@ -77,13 +78,13 @@ func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).NotTo(Succeed(), "should not allow deletion when claims exist")
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).NotTo(Succeed(), "should not allow deletion when claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().NotTo(BeNil(), "should not allow deletion when claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().NotTo(BeNil(), "should not allow deletion when claims exist")
 
 	g.Expect(fakeClient.DeleteAllOf(ctx, &ipamv1.IPAddress{})).To(Succeed())
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).To(Succeed(), "should allow deletion when no claims exist")
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).To(Succeed(), "should allow deletion when no claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().To(BeNil(), "should allow deletion when no claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().To(BeNil(), "should allow deletion when no claims exist")
 }
 
 func TestUpdatingPoolInUseAddresses(t *testing.T) {
@@ -134,8 +135,8 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 	namespacedPool.Spec.Addresses = []string{"10.0.0.15-10.0.0.20"}
 	globalPool.Spec.Addresses = []string{"10.0.0.15-10.0.0.20"}
 
-	g.Expect(webhook.ValidateUpdate(ctx, oldNamespacedPool, namespacedPool)).NotTo(Succeed(), "should not allow removing in use IPs from addresses field in pool")
-	g.Expect(webhook.ValidateUpdate(ctx, oldGlobalPool, globalPool)).NotTo(Succeed(), "should not allow removing in use IPs from addresses field in pool")
+	g.Expect(webhook.ValidateUpdate(ctx, oldNamespacedPool, namespacedPool)).Error().NotTo(BeNil(), "should not allow removing in use IPs from addresses field in pool")
+	g.Expect(webhook.ValidateUpdate(ctx, oldGlobalPool, globalPool)).Error().NotTo(BeNil(), "should not allow removing in use IPs from addresses field in pool")
 }
 
 func TestDeleteSkip(t *testing.T) {
@@ -187,8 +188,8 @@ func TestDeleteSkip(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).To(Succeed())
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).To(Succeed())
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().To(BeNil())
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().To(BeNil())
 }
 
 func TestInClusterIPPoolDefaulting(t *testing.T) {
@@ -655,6 +656,7 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 
 			g := NewWithT(t)
 			g.Expect(testCreate(context.Background(), pool, &webhook)).
+				Error().
 				To(MatchError(ContainSubstring(tt.expectedError)))
 		})
 		t.Run("update", func(t *testing.T) {
@@ -662,6 +664,7 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 
 			g := NewWithT(t)
 			g.Expect(testUpdate(context.Background(), pool, &webhook)).
+				Error().
 				To(MatchError(ContainSubstring(tt.expectedError)))
 		})
 		t.Run("delete", func(t *testing.T) {
@@ -669,37 +672,38 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 
 			g := NewWithT(t)
 			g.Expect(testDelete(context.Background(), pool, &webhook)).
+				Error().
 				To(Succeed())
 		})
 	})
 }
 
-func testCreate(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) error {
+func testCreate(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) (admission.Warnings, error) {
 	createCopy := obj.DeepCopyObject()
 	if err := webhook.Default(ctx, createCopy); err != nil {
-		return err
+		return nil, err
 	}
 	return webhook.ValidateCreate(ctx, createCopy)
 }
 
-func testDelete(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) error {
+func testDelete(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) (admission.Warnings, error) {
 	deleteCopy := obj.DeepCopyObject()
 	if err := webhook.Default(ctx, deleteCopy); err != nil {
-		return err
+		return nil, err
 	}
 	return webhook.ValidateDelete(ctx, deleteCopy)
 }
 
-func testUpdate(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) error {
+func testUpdate(ctx context.Context, obj runtime.Object, webhook customDefaulterValidator) (admission.Warnings, error) {
 	updateCopy := obj.DeepCopyObject()
 	updatedCopy := obj.DeepCopyObject()
 	err := webhook.Default(ctx, updateCopy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = webhook.Default(ctx, updatedCopy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return webhook.ValidateUpdate(ctx, updateCopy, updatedCopy)
 }
@@ -708,14 +712,14 @@ func createIP(name string, ip string, pool types.GenericInClusterPool) *ipamv1.I
 	return &ipamv1.IPAddress{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "IPAddress",
-			APIVersion: "ipam.cluster.x-k8s.io/v1alpha1",
+			APIVersion: "ipam.cluster.x-k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: ipamv1.IPAddressSpec{
 			PoolRef: corev1.TypedLocalObjectReference{
-				APIGroup: pointer.String(pool.GetObjectKind().GroupVersionKind().Group),
+				APIGroup: ptr.To(pool.GetObjectKind().GroupVersionKind().Group),
 				Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 				Name:     pool.GetName(),
 			},

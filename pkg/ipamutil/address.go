@@ -22,8 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -73,8 +73,8 @@ func EnsureIPAddressOwnerReferences(scheme *runtime.Scheme, address *ipamv1.IPAd
 		}
 	}
 
-	address.OwnerReferences[poolRefIdx].Controller = pointer.Bool(false)
-	address.OwnerReferences[poolRefIdx].BlockOwnerDeletion = pointer.Bool(true)
+	address.OwnerReferences[poolRefIdx].Controller = ptr.To(false)
+	address.OwnerReferences[poolRefIdx].BlockOwnerDeletion = ptr.To(true)
 
 	return nil
 }

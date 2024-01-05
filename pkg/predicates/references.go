@@ -19,16 +19,16 @@ package predicates
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterexpv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 func processIfClaimReferencesPoolKind(gk metav1.GroupKind, obj client.Object) bool {
-	var claim *clusterexpv1.IPAddressClaim
+	var claim *ipamv1.IPAddressClaim
 	var ok bool
-	if claim, ok = obj.(*clusterexpv1.IPAddressClaim); !ok {
+	if claim, ok = obj.(*ipamv1.IPAddressClaim); !ok {
 		return false
 	}
 
@@ -58,9 +58,9 @@ func ClaimReferencesPoolKind(gk metav1.GroupKind) predicate.Funcs {
 }
 
 func processIfAddressReferencesPoolKind(gk metav1.GroupKind, obj client.Object) bool {
-	var addr *clusterexpv1.IPAddress
+	var addr *ipamv1.IPAddress
 	var ok bool
-	if addr, ok = obj.(*clusterexpv1.IPAddress); !ok {
+	if addr, ok = obj.(*ipamv1.IPAddress); !ok {
 		return false
 	}
 

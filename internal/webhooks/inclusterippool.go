@@ -26,10 +26,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/internal/poolutil"
@@ -70,47 +71,49 @@ type InClusterIPPool struct {
 	Client client.Reader
 }
 
-var _ webhook.CustomDefaulter = &InClusterIPPool{}
-var _ webhook.CustomValidator = &InClusterIPPool{}
+var (
+	_ webhook.CustomDefaulter = &InClusterIPPool{}
+	_ webhook.CustomValidator = &InClusterIPPool{}
+)
 
 // Default satisfies the defaulting webhook interface.
-func (webhook *InClusterIPPool) Default(_ context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	pool, ok := obj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a InClusterIPPool or an GlobalInClusterIPPool but got a %T", obj))
 	}
-	return webhook.validate(nil, pool)
+	return nil, webhook.validate(nil, pool)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	newPool, ok := newObj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", newObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", newObj))
 	}
 	oldPool, ok := oldObj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", oldObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", oldObj))
 	}
 
 	err := webhook.validate(oldPool, newPool)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	oldPoolRef := corev1.TypedLocalObjectReference{
-		APIGroup: pointer.String(v1alpha2.GroupVersion.Group),
+		APIGroup: ptr.To(v1alpha2.GroupVersion.Group),
 		Kind:     oldPool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     oldPool.GetName(),
 	}
 	inUseAddresses, err := poolutil.ListAddressesInUse(ctx, webhook.Client, oldPool.GetNamespace(), oldPoolRef)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	inUseBuilder := &netipx.IPSetBuilder{}
@@ -125,49 +128,49 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 	newPoolIPSet, err := poolutil.PoolSpecToIPSet(newPool.PoolSpec())
 	if err != nil {
 		// these addresses are already validated, this shouldn't happen
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	inUseBuilder.RemoveSet(newPoolIPSet)
 	outOfRangeIPSet, err := inUseBuilder.IPSet()
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	if outOfRange := outOfRangeIPSet.Ranges(); len(outOfRange) > 0 {
-		return apierrors.NewBadRequest(fmt.Sprintf("pool addresses do not contain allocated addresses: %v", outOfRange))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("pool addresses do not contain allocated addresses: %v", outOfRange))
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (webhook *InClusterIPPool) ValidateDelete(ctx context.Context, obj runtime.Object) (reterr error) {
+func (webhook *InClusterIPPool) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	pool, ok := obj.(types.GenericInClusterPool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an InClusterIPPool or a GlobalInClusterIPPool but got a %T", obj))
 	}
 
 	if _, ok := pool.GetAnnotations()[SkipValidateDeleteWebhookAnnotation]; ok {
-		return nil
+		return nil, nil
 	}
 
 	poolTypeRef := corev1.TypedLocalObjectReference{
-		APIGroup: pointer.String(pool.GetObjectKind().GroupVersionKind().Group),
+		APIGroup: ptr.To(pool.GetObjectKind().GroupVersionKind().Group),
 		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     pool.GetName(),
 	}
 
 	inUseAddresses, err := poolutil.ListAddressesInUse(ctx, webhook.Client, pool.GetNamespace(), poolTypeRef)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	if len(inUseAddresses) > 0 {
-		return apierrors.NewBadRequest("Pool has IPAddresses allocated. Cannot delete Pool until all IPAddresses have been removed.")
+		return nil, apierrors.NewBadRequest("Pool has IPAddresses allocated. Cannot delete Pool until all IPAddresses have been removed.")
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) (reterr error) {

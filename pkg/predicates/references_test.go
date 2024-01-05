@@ -22,8 +22,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	clusterexpv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -36,7 +36,7 @@ func TestClaimReferencesPoolKind(t *testing.T) {
 		{
 			name: "true for valid reference",
 			ref: corev1.TypedLocalObjectReference{
-				APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+				APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 				Kind:     "InClusterIPPool",
 			},
 			result: true,
@@ -44,7 +44,7 @@ func TestClaimReferencesPoolKind(t *testing.T) {
 		{
 			name: "false when kind does not match",
 			ref: corev1.TypedLocalObjectReference{
-				APIGroup: pointer.String("ipam.cluster.x-k8s.io"),
+				APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 				Kind:     "OutOfClusterIPPool",
 			},
 			result: false,
@@ -59,7 +59,7 @@ func TestClaimReferencesPoolKind(t *testing.T) {
 		{
 			name: "false when group does not match",
 			ref: corev1.TypedLocalObjectReference{
-				APIGroup: pointer.String("cluster.x-k8s.io"),
+				APIGroup: ptr.To("cluster.x-k8s.io"),
 				Kind:     "InClusterIPPool",
 			},
 			result: false,
@@ -74,8 +74,8 @@ func TestClaimReferencesPoolKind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			claim := &clusterexpv1.IPAddressClaim{
-				Spec: clusterexpv1.IPAddressClaimSpec{
+			claim := &ipamv1.IPAddressClaim{
+				Spec: ipamv1.IPAddressClaimSpec{
 					PoolRef: tt.ref,
 				},
 			}
