@@ -19,9 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/pkg/errors"
-	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -164,19 +164,19 @@ func (i *InClusterProviderAdapter) ClaimHandlerFor(_ client.Client, claim *ipamv
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
 
 // FetchPool fetches the (Global)InClusterIPPool.
-func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (*ctrl.Result, error) {
+func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (client.Object, *ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	if h.claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
 		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
-			return nil, errors.Wrap(err, "failed to fetch pool")
+			return nil, nil, errors.Wrap(err, "failed to fetch pool")
 		}
 		h.pool = icippool
 	} else if h.claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		gicippool := &v1alpha2.GlobalInClusterIPPool{}
 		if err := h.Client.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		h.pool = gicippool
 	}
@@ -184,10 +184,10 @@ func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (*ctrl.Result, er
 	if h.pool == nil {
 		err := errors.New("pool not found")
 		log.Error(err, "the referenced pool could not be found")
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	return nil, nil
+	return h.pool, nil, nil
 }
 
 // EnsureAddress ensures that the IPAddress contains a valid address.
@@ -230,15 +230,6 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 func (h *IPAddressClaimHandler) ReleaseAddress() (*ctrl.Result, error) {
 	// We don't need to do anything here, since the ip address is released when the IPAddress is deleted
 	return nil, nil
-}
-
-// GetPool returns the pool referenced by the claim that is processed.
-// Will panic if called before FetchPool().
-func (h *IPAddressClaimHandler) GetPool() client.Object {
-	if h.pool == nil {
-		panic("cannot return pool before fetching it")
-	}
-	return h.pool
 }
 
 func buildAddressList(addressesInUse []ipamv1.IPAddress, gateway string) []string {

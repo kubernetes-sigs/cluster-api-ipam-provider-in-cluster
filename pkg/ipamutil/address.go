@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// newIPAddress creates a new ipamv1.IPAddress with references to a pool and claim.
-func newIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAddress {
+// NewIPAddress creates a new ipamv1.IPAddress with references to a pool and claim.
+func NewIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAddress {
 	poolGVK := pool.GetObjectKind().GroupVersionKind()
 
 	return ipamv1.IPAddress{
