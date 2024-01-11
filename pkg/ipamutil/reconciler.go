@@ -69,7 +69,7 @@ type ProviderAdapter interface {
 type ClaimHandler interface {
 	// FetchPool is called to fetch the pool referenced by the claim. The pool needs to be stored by the handler.
 	FetchPool(ctx context.Context) (client.Object, *ctrl.Result, error)
-	// EnsureAddress is called to make sure that the IPAddress.Spec is correct and address is allocated.
+	// EnsureAddress is called to make sure that the IPAddress.Spec is correct and the address is allocated.
 	EnsureAddress(ctx context.Context, address *ipamv1.IPAddress) (*ctrl.Result, error)
 	// ReleaseAddress is called to release the ip address that was allocated for the claim.
 	ReleaseAddress() (*ctrl.Result, error)
