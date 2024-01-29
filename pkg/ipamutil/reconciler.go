@@ -168,7 +168,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 			err := errors.New("pool not found")
 			log.Error(err, "the referenced pool could not be found")
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-				return r.reconcileDelete(ctx, claim)
+				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
 			}
 			return ctrl.Result{}, nil
 		}
@@ -191,7 +191,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		if res, err := handler.ReleaseAddress(); err != nil {
 			return unwrapResult(res), err
 		}
-		return r.reconcileDelete(ctx, claim)
+		return ctrl.Result{}, r.reconcileDelete(ctx, claim)
 	}
 
 	// We always ensure there is a valid address object passed to the handler.
@@ -234,33 +234,33 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	return ctrl.Result{}, nil
 }
 
-func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) {
+func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) error {
 	address := &ipamv1.IPAddress{}
 	namespacedName := types.NamespacedName{
 		Namespace: claim.Namespace,
 		Name:      claim.Name,
 	}
 	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
+		return errors.Wrap(err, "failed to fetch address")
 	}
 
 	if address.Name != "" {
 		var err error
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
 			if err = r.Client.Update(ctx, address); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, errors.Wrap(err, "failed to remove address finalizer")
+				return errors.Wrap(err, "failed to remove address finalizer")
 			}
 		}
 
 		if err == nil {
 			if err := r.Client.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, err
+				return err
 			}
 		}
 	}
 
 	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {
