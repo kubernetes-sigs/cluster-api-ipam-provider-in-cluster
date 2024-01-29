@@ -19,25 +19,18 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
-	clusterutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -59,61 +52,55 @@ const (
 	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
 )
 
-// IPAddressClaimReconciler reconciles a InClusterIPPool object.
-type IPAddressClaimReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+type genericInClusterPool interface {
+	client.Object
+	PoolSpec() *v1alpha2.InClusterIPPoolSpec
+}
 
+// InClusterProviderAdapter is used as middle layer for provider integration.
+type InClusterProviderAdapter struct {
+	Client           client.Client
 	WatchFilterValue string
 }
 
+var _ ipamutil.ProviderAdapter = &InClusterProviderAdapter{}
+
+// IPAddressClaimHandler reconciles a InClusterIPPool object.
+type IPAddressClaimHandler struct {
+	client.Client
+	claim *ipamv1.IPAddressClaim
+	pool  genericInClusterPool
+}
+
+var _ ipamutil.ClaimHandler = &IPAddressClaimHandler{}
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(
-			&ipamv1.IPAddressClaim{},
-			builder.WithPredicates(
-				predicate.Or(
-					ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-						Group: v1alpha2.GroupVersion.Group,
-						Kind:  inClusterIPPoolKind,
-					}),
-					ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
-						Group: v1alpha2.GroupVersion.Group,
-						Kind:  globalInClusterIPPoolKind,
-					}),
-				),
-			)).
-		// A Watch is added for the Cluster in the case that the Cluster is
-		// unpaused so that a request can be queued to re-reconcile the
-		// IPAddressClaim.
-		Watches(
-			&clusterv1.Cluster{},
-			handler.EnqueueRequestsFromMapFunc(r.clusterToIPClaims),
-			builder.WithPredicates(predicate.Funcs{
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					oldCluster := e.ObjectOld.(*clusterv1.Cluster)
-					newCluster := e.ObjectNew.(*clusterv1.Cluster)
-					return annotations.IsPaused(oldCluster, oldCluster) && !annotations.IsPaused(newCluster, newCluster)
-				},
-				CreateFunc: func(e event.CreateEvent) bool {
-					cluster := e.Object.(*clusterv1.Cluster)
-					return !annotations.IsPaused(cluster, cluster)
-				},
-			}),
-		).
+func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.Builder) error {
+	b.
+		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
+			predicate.Or(
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha2.GroupVersion.Group,
+					Kind:  inClusterIPPoolKind,
+				}),
+				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
+					Group: v1alpha2.GroupVersion.Group,
+					Kind:  globalInClusterIPPoolKind,
+				}),
+			),
+		)).
 		WithOptions(controller.Options{
 			// To avoid race conditions when allocating IP Addresses, we explicitly set this to 1
 			MaxConcurrentReconciles: 1,
 		}).
 		Watches(
 			&v1alpha2.InClusterIPPool{},
-			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("InClusterIPPool")),
+			handler.EnqueueRequestsFromMapFunc(i.inClusterIPPoolToIPClaims("InClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
 		Watches(
 			&v1alpha2.GlobalInClusterIPPool{},
-			handler.EnqueueRequestsFromMapFunc(r.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
+			handler.EnqueueRequestsFromMapFunc(i.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
 			builder.WithPredicates(resourceTransitionedToUnpaused()),
 		).
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
@@ -121,17 +108,16 @@ func (r *IPAddressClaimReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				Group: v1alpha2.GroupVersion.Group,
 				Kind:  inClusterIPPoolKind,
 			}),
-		)).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
-		Complete(r)
+		))
+	return nil
 }
 
-func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) func(context.Context, client.Object) []reconcile.Request {
+func (i *InClusterProviderAdapter) inClusterIPPoolToIPClaims(kind string) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, a client.Object) []reconcile.Request {
 		pool := a.(pooltypes.GenericInClusterPool)
 		requests := []reconcile.Request{}
 		claims := &ipamv1.IPAddressClaimList{}
-		err := r.Client.List(ctx, claims,
+		err := i.Client.List(ctx, claims,
 			client.MatchingFields{
 				"index.poolRef": index.IPPoolRefValue(corev1.TypedLocalObjectReference{
 					Name:     pool.GetName(),
@@ -157,234 +143,106 @@ func (r *IPAddressClaimReconciler) inClusterIPPoolToIPClaims(kind string) func(c
 	}
 }
 
+// ClaimHandlerFor returns a claim handler for a specific claim.
+func (i *InClusterProviderAdapter) ClaimHandlerFor(_ client.Client, claim *ipamv1.IPAddressClaim) ipamutil.ClaimHandler {
+	return &IPAddressClaimHandler{
+		Client: i.Client,
+		claim:  claim,
+	}
+}
+
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=inclusterippools,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=inclusterippools/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=inclusterippools/finalizers,verbs=update
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=globalinclusterippools,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=globalinclusterippools/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=globalinclusterippools/finalizers,verbs=update
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims/status;ipaddresses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims/status;ipaddresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-func (r *IPAddressClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+// FetchPool fetches the (Global)InClusterIPPool.
+func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (client.Object, *ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("Reconciling claim")
 
-	// Fetch the IPAddressClaim
-	claim := &ipamv1.IPAddressClaim{}
-	if err := r.Client.Get(ctx, req.NamespacedName, claim); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	if _, ok := claim.GetLabels()[clusterv1.ClusterNameLabel]; ok {
-		cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
-				return ctrl.Result{}, nil
-			}
-
-			log.Error(err, "error fetching cluster linked to IPAddressClaim")
-			return ctrl.Result{}, err
-		}
-
-		if annotations.IsPaused(cluster, cluster) {
-			log.Info("IPAddressClaim linked to a cluster that is paused, skipping reconciliation")
-			return ctrl.Result{}, nil
-		}
-	}
-
-	if annotations.HasPaused(claim) {
-		log.Info("IPAddressClaim is paused, skipping reconciliation.")
-		return ctrl.Result{}, nil
-	}
-
-	patchHelper, err := patch.NewHelper(claim, r.Client)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	defer func() {
-		if err := patchHelper.Patch(ctx, claim); err != nil {
-			reterr = kerrors.NewAggregate([]error{reterr, err})
-		}
-	}()
-
-	if !controllerutil.ContainsFinalizer(claim, ReleaseAddressFinalizer) {
-		controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
-	}
-
-	pool, err := r.findPool(ctx, claim)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			err := errors.New("pool not found")
-			log.Error(err, "the referenced pool could not be found")
-			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-				return r.reconcileDelete(ctx, claim)
-			}
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
-	}
-
-	if pool != nil && annotations.HasPaused(pool) {
-		log.Info("IPAddressClaim references Pool which is paused, skipping reconciliation.", "IPAddressClaim", claim.GetName(), "Pool", pool.GetName())
-		return ctrl.Result{}, nil
-	}
-
-	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, claim)
-	}
-
-	return r.reconcileNormal(ctx, claim, pool)
-}
-
-func (r *IPAddressClaimReconciler) findPool(ctx context.Context, claim *ipamv1.IPAddressClaim) (pooltypes.GenericInClusterPool, error) {
-	if claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
+	if h.claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: claim.Namespace, Name: claim.Spec.PoolRef.Name}, icippool); err != nil {
-			return nil, err
+		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
+			return nil, nil, errors.Wrap(err, "failed to fetch pool")
 		}
-		return icippool, nil
-	} else if claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
+		h.pool = icippool
+	} else if h.claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		gicippool := &v1alpha2.GlobalInClusterIPPool{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Name: claim.Spec.PoolRef.Name}, gicippool); err != nil {
-			return nil, err
+		if err := h.Client.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil {
+			return nil, nil, err
 		}
-		return gicippool, nil
+		h.pool = gicippool
 	}
-	return nil, fmt.Errorf("unknown pool type: %s", claim.Spec.PoolRef.Kind)
+
+	if h.pool == nil {
+		err := errors.New("pool not found")
+		log.Error(err, "the referenced pool could not be found")
+		return nil, nil, nil
+	}
+
+	return h.pool, nil, nil
 }
 
-func (r *IPAddressClaimReconciler) reconcileNormal(ctx context.Context, claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool) (ctrl.Result, error) { //nolint:unparam
-	log := ctrl.LoggerFrom(ctx).WithValues(pool.GetObjectKind().GroupVersionKind().Kind, fmt.Sprintf("%s/%s", pool.GetNamespace(), pool.GetName()))
-
-	addressesInUse, err := poolutil.ListAddressesInUse(ctx, r.Client, pool.GetNamespace(), claim.Spec.PoolRef)
+// EnsureAddress ensures that the IPAddress contains a valid address.
+func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipamv1.IPAddress) (*ctrl.Result, error) {
+	addressesInUse, err := poolutil.ListAddressesInUse(ctx, h.Client, h.pool.GetNamespace(), h.claim.Spec.PoolRef)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to list addresses: %w", err)
+		return nil, fmt.Errorf("failed to list addresses: %w", err)
 	}
 
-	address := poolutil.AddressByNamespacedName(addressesInUse, claim.Namespace, claim.Name)
-	if address == nil {
-		var err error
-		address, err = r.allocateAddress(claim, pool, addressesInUse)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to allocate address")
-		}
-	}
-
-	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, address, func() error {
-		if err := ipamutil.EnsureIPAddressOwnerReferences(r.Scheme, address, claim, pool); err != nil {
-			return errors.Wrap(err, "failed to ensure owner references on address")
-		}
-
-		_ = controllerutil.AddFinalizer(address, ProtectAddressFinalizer)
-
-		return nil
+	allocated := slices.ContainsFunc(addressesInUse, func(a ipamv1.IPAddress) bool {
+		return a.Name == address.Name && a.Namespace == address.Namespace
 	})
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to create or patch address")
-	}
 
-	log.Info(fmt.Sprintf("IPAddress %s/%s (%s) has been %s", address.Namespace, address.Name, address.Spec.Address, operationResult),
-		"IPAddressClaim", fmt.Sprintf("%s/%s", claim.Namespace, claim.Name))
-
-	if !address.DeletionTimestamp.IsZero() {
-		// We prevent deleting IPAddresses while their corresponding IPClaim still exists since we cannot guarantee that the IP
-		// wil remain the same when we recreate it.
-		log.Info("Address is marked for deletion, but deletion is prevented until the claim is deleted as well.", "address", address.Name)
-	}
-
-	claim.Status.AddressRef = corev1.LocalObjectReference{Name: address.Name}
-
-	return ctrl.Result{}, nil
-}
-
-func (r *IPAddressClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) (ctrl.Result, error) { //nolint:unparam
-	address := &ipamv1.IPAddress{}
-	namespacedName := types.NamespacedName{
-		Namespace: claim.Namespace,
-		Name:      claim.Name,
-	}
-	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
-	}
-
-	if address.Name != "" {
-		var err error
-		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
-			if err = r.Client.Update(ctx, address); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, errors.Wrap(err, "failed to remove address finalizer")
-			}
+	if !allocated {
+		poolSpec := h.pool.PoolSpec()
+		inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse, poolSpec.Gateway))
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert IPAddressList to IPSet: %w", err)
 		}
 
-		if err == nil {
-			if err := r.Client.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
+		poolIPSet, err := poolutil.PoolSpecToIPSet(poolSpec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert pool to range: %w", err)
 		}
-	}
 
-	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
-	return ctrl.Result{}, nil
-}
-
-func (r *IPAddressClaimReconciler) allocateAddress(claim *ipamv1.IPAddressClaim, pool pooltypes.GenericInClusterPool, addressesInUse []ipamv1.IPAddress) (*ipamv1.IPAddress, error) {
-	poolSpec := pool.PoolSpec()
-
-	inUseIPSet, err := poolutil.AddressesToIPSet(buildAddressList(addressesInUse))
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert IPAddressList to IPSet: %w", err)
-	}
-
-	poolIPSet, err := poolutil.PoolSpecToIPSet(poolSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert pool to range: %w", err)
-	}
-
-	freeIP, err := poolutil.FindFreeAddress(poolIPSet, inUseIPSet)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find free address: %w", err)
-	}
-
-	address := ipamutil.NewIPAddress(claim, pool)
-	address.Spec.Address = freeIP.String()
-	address.Spec.Gateway = poolSpec.Gateway
-	address.Spec.Prefix = poolSpec.Prefix
-
-	return &address, nil
-}
-
-func (r *IPAddressClaimReconciler) clusterToIPClaims(ctx context.Context, a client.Object) []reconcile.Request {
-	requests := []reconcile.Request{}
-	vms := &ipamv1.IPAddressClaimList{}
-	err := r.Client.List(ctx, vms, client.MatchingLabels(
-		map[string]string{
-			clusterv1.ClusterNameLabel: a.GetName(),
-		},
-	))
-	if err != nil {
-		return requests
-	}
-	for _, vm := range vms.Items {
-		r := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      vm.Name,
-				Namespace: vm.Namespace,
-			},
+		freeIP, err := poolutil.FindFreeAddress(poolIPSet, inUseIPSet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find free address: %w", err)
 		}
-		requests = append(requests, r)
+
+		address.Spec.Address = freeIP.String()
+		address.Spec.Gateway = poolSpec.Gateway
+		address.Spec.Prefix = poolSpec.Prefix
 	}
-	return requests
+
+	return nil, nil
 }
 
-func buildAddressList(addressesInUse []ipamv1.IPAddress) []string {
-	addrStrings := make([]string, len(addressesInUse))
+// ReleaseAddress releases the ip address.
+func (h *IPAddressClaimHandler) ReleaseAddress() (*ctrl.Result, error) {
+	// We don't need to do anything here, since the ip address is released when the IPAddress is deleted
+	return nil, nil
+}
+
+func buildAddressList(addressesInUse []ipamv1.IPAddress, gateway string) []string {
+	// Add extra capacity for the case that the pool's gateway is specified
+	addrStrings := make([]string, len(addressesInUse), len(addressesInUse)+1)
 	for i, address := range addressesInUse {
 		addrStrings[i] = address.Spec.Address
 	}
+
+	if gateway != "" {
+		addrStrings = append(addrStrings, gateway)
+	}
+
 	return addrStrings
 }
 
