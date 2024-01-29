@@ -12,7 +12,7 @@ require (
 	k8s.io/client-go v0.29.0
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	sigs.k8s.io/cluster-api v1.6.0
+	sigs.k8s.io/cluster-api v1.6.1
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
@@ -61,7 +61,6 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
