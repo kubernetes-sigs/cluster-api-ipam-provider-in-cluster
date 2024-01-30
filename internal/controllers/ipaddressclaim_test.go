@@ -91,7 +91,10 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		When("the referenced namespaced pool exists", func() {
-			const poolName = "test-pool"
+			const (
+				clusterName = "test-cluster"
+				poolName    = "test-pool"
+			)
 
 			BeforeEach(func() {
 				pool := v1alpha2.InClusterIPPool{
@@ -116,6 +119,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 			It("should allocate an Address from the Pool", func() {
 				claim := newClaim("test", namespace, "InClusterIPPool", poolName)
+				claim.Labels = map[string]string{clusterv1.ClusterNameLabel: clusterName}
 				expectedIPAddress := ipamv1.IPAddress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test",
@@ -137,6 +141,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 								Name:               poolName,
 							},
 						},
+						Labels: map[string]string{clusterv1.ClusterNameLabel: clusterName},
 					},
 					Spec: ipamv1.IPAddressSpec{
 						ClaimRef: corev1.LocalObjectReference{

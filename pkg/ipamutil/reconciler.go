@@ -198,7 +198,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	// The handler will complete it with the ip address.
 	address := NewIPAddress(claim, pool)
 
-	// Patch or create the address, ensuring necessary owner references are set.
+	// Patch or create the address, ensuring necessary owner references and labels are set
 	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, &address, func() error {
 		if res, err = handler.EnsureAddress(ctx, &address); err != nil {
 			return err
@@ -206,6 +206,13 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 		if err = ensureIPAddressOwnerReferences(r.Scheme, &address, claim, pool); err != nil {
 			return errors.Wrap(err, "failed to ensure owner references on address")
+		}
+
+		if val, ok := claim.Labels[clusterv1.ClusterNameLabel]; ok {
+			if address.Labels == nil {
+				address.Labels = make(map[string]string)
+			}
+			address.Labels[clusterv1.ClusterNameLabel] = val
 		}
 
 		_ = controllerutil.AddFinalizer(&address, ProtectAddressFinalizer)
