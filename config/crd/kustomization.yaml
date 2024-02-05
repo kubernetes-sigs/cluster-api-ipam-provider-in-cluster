@@ -10,6 +10,8 @@ resources:
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
+- path: patches/clusterctl-label_in_inclusterippools.yaml
+- path: patches/clusterctl-label_in_globalinclusterippools.yaml
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 - path: patches/webhook_in_inclusterippools.yaml
