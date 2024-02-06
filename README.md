@@ -15,7 +15,7 @@ IPAM providers allow to control how IP addresses are assigned to Cluster API Mac
 
 ## Setup via clusterctl
 
-This provider comes with clusterctl support. Since it's not added to the built-in list of providers yet, you'll need to add the following to your `~/.cluster-api/clusterctl.yaml` if you want to install it using `clusterctl init --ipam in-cluster`:
+This provider comes with clusterctl support. Since it's not added to the built-in list of providers yet, you'll need to add the following to your `$XDG_CONFIG_HOME/cluster-api/clusterctl.yaml` if you want to install it using `clusterctl init --ipam in-cluster`:
 
 ```yaml
 providers:
