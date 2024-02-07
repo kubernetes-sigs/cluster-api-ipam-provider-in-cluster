@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-provider-in-cluster
+IMG ?= gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-provider-in-cluster-controller
 TAG ?= dev
 # PULL_BASE_REF is set by prow and contains the git ref for a build, e.g. branch name or tag
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
