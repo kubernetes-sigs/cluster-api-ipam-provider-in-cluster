@@ -97,6 +97,18 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			)
 
 			BeforeEach(func() {
+				cluster := clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: false,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
 				pool := v1alpha2.InClusterIPPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      poolName,
@@ -115,6 +127,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			AfterEach(func() {
 				deleteClaim("test", namespace)
 				deleteNamespacedPool(poolName, namespace)
+
+				cluster := clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+				}
+				ExpectWithOffset(1, k8sClient.Delete(context.Background(), &cluster)).To(Succeed())
+				EventuallyWithOffset(1, Get(&cluster)).Should(Not(Succeed()))
 			})
 
 			It("should allocate an Address from the Pool", func() {
