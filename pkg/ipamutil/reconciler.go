@@ -72,7 +72,7 @@ type ClaimHandler interface {
 	// EnsureAddress is called to make sure that the IPAddress.Spec is correct and the address is allocated.
 	EnsureAddress(ctx context.Context, address *ipamv1.IPAddress) (*ctrl.Result, error)
 	// ReleaseAddress is called to release the ip address that was allocated for the claim.
-	ReleaseAddress() (*ctrl.Result, error)
+	ReleaseAddress(ctx context.Context) (*ctrl.Result, error)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -188,7 +188,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	// If the claim is marked for deletion, release the address.
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-		if res, err := handler.ReleaseAddress(); err != nil {
+		if res, err := handler.ReleaseAddress(ctx); err != nil {
 			return unwrapResult(res), err
 		}
 		return ctrl.Result{}, r.reconcileDelete(ctx, claim)
