@@ -7,6 +7,6 @@ spec:
   template:
     spec:
       containers:
-      - image: ghcr.io/telekom/cluster-api-ipam-provider-in-cluster:main
+      - name: manager
+        image: gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-in-cluster-controller:dev
         imagePullPolicy: Always
-        name: manager

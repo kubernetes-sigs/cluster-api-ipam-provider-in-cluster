@@ -13,8 +13,14 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-in-cluster-controller
 TAG ?= dev
+
+PROD_REGISTRY ?= registry.k8s.io/capi-ipam-ic
+STAGING_REGISTRY ?= gcr.io/k8s-staging-capi-ipam-ic
+
+IMAGE_NAME ?= cluster-api-ipam-in-cluster-controller
+STAGING_IMG ?= $(STAGING_REGISTRY)/$(IMAGE_NAME)
+
 # PULL_BASE_REF is set by prow and contains the git ref for a build, e.g. branch name or tag
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 
@@ -101,7 +107,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: licenses-report ## Build docker image with the manager.
-	ARCH=$(ARCH) docker build --build-arg ARCH=$(ARCH)  -t $(IMG)-$(ARCH):$(TAG) .
+	ARCH=$(ARCH) docker build --build-arg ARCH=$(ARCH)  -t $(STAGING_IMG)-$(ARCH):$(TAG) .
 
 .PHONY: docker-build-all
 docker-build-all: $(addprefix docker-build-,$(ALL_ARCH))
@@ -117,13 +123,13 @@ docker-push-%:
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push $(IMG)-$(ARCH):$(TAG)
+	docker push $(STAGING_IMG)-$(ARCH):$(TAG)
 
 docker-push-manifest:
-	docker manifest create --amend $(IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(IMG)\-&:$(TAG)~g")
+	docker manifest create --amend $(STAGING_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(STAGING_IMG)\-&:$(TAG)~g")
 	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${IMG}:${TAG} ${IMG}-$${arch}:${TAG}; done
-	docker manifest push --purge $(IMG):$(TAG)
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
+	docker manifest push --purge $(STAGING_IMG):$(TAG)
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(STAGING_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
 	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
 
@@ -141,8 +147,7 @@ release: clean-release
 	@if [ -z "${RELEASE_TAG}" ]; then echo "RELEASE_TAG is not set"; exit 1; fi
 	@if ! [ -z "$$(git status --porcelain)" ]; then echo "Your local git repository contains uncommitted changes, use git clean before proceeding."; exit 1; fi
 	git checkout "${RELEASE_TAG}"
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(IMG) MANIFEST_TAG=$(RELEASE_TAG)
-	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent
+	$(MAKE) manifest-modification REGISTRY=$(PROD_REGISTRY)
 	$(MAKE) release-manifests
 	$(MAKE) release-metadata
 	$(MAKE) licenses-report
@@ -156,6 +161,11 @@ clean-release:
 clean-release-git: ## Restores the git files usually modified during a release
 	git restore ./*manager_image_patch.yaml
 
+.PHONY: manifest-modification
+manifest-modification:
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG)
+	$(MAKE) set-manifest-pull-policy PULL_POLICY=IfNotPresent
+
 .PHONY: release-manifests
 release-manifests: kustomize $(RELEASE_DIR)
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/ipam-components.yaml
@@ -166,7 +176,7 @@ release-metadata:
 
 .PHONY: staging-images-release-alias-tag
 staging-images-release-alias-tag: ## Add the release alias tag to the last build tag
-	gcloud container images add-tag $(IMG):$(TAG) $(IMG):$(RELEASE_ALIAS_TAG)
+	gcloud container images add-tag $(STAGING_IMG):$(TAG) $(STAGING_IMG):$(RELEASE_ALIAS_TAG)
 
 .PHONY: release-staging-images
 release-staging-images: docker-build-all docker-push-all staging-images-release-alias-tag
