@@ -227,7 +227,7 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 }
 
 // ReleaseAddress releases the ip address.
-func (h *IPAddressClaimHandler) ReleaseAddress() (*ctrl.Result, error) {
+func (h *IPAddressClaimHandler) ReleaseAddress(_ context.Context) (*ctrl.Result, error) {
 	// We don't need to do anything here, since the ip address is released when the IPAddress is deleted
 	return nil, nil
 }
