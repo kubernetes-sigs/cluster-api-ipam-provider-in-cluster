@@ -127,10 +127,8 @@ docker-push: ## Push docker image with the manager.
 
 docker-push-manifest:
 	docker manifest create --amend $(STAGING_IMG):$(TAG) $(shell echo $(ALL_ARCH) | sed -e "s~[^ ]*~$(STAGING_IMG)\-&:$(TAG)~g")
-	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} ${IMG}:${TAG} ${IMG}-$${arch}:${TAG}; done
+	@for arch in $(ALL_ARCH); do docker manifest annotate --arch $${arch} $(STAGING_IMG):$(TAG) $(STAGING_IMG)-$${arch}:$(TAG); done
 	docker manifest push --purge $(STAGING_IMG):$(TAG)
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(STAGING_IMG) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
-	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
 
 ##@ Release
