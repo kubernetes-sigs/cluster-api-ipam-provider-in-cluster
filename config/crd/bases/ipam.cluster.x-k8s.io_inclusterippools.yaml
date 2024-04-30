@@ -1,11 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: inclusterippools.ipam.cluster.x-k8s.io
 spec:
   group: ipam.cluster.x-k8s.io
@@ -54,14 +52,19 @@ spec:
         description: InClusterIPPool is the Schema for the inclusterippools API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -69,32 +72,37 @@ spec:
             description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
               addresses:
-                description: Addresses is a list of IP addresses that can be assigned.
-                  This set of addresses can be non-contiguous. Can be omitted if subnet,
-                  or first and last is set.
+                description: |-
+                  Addresses is a list of IP addresses that can be assigned. This set of
+                  addresses can be non-contiguous. Can be omitted if subnet, or first and
+                  last is set.
                 items:
                   type: string
                 type: array
               end:
-                description: Last is the last address that can be assigned. Must come
-                  after first and needs to fit into a common subnet. If unset, the
-                  second last address of subnet will be used.
+                description: |-
+                  Last is the last address that can be assigned.
+                  Must come after first and needs to fit into a common subnet.
+                  If unset, the second last address of subnet will be used.
                 type: string
               gateway:
                 description: Gateway
                 type: string
               prefix:
-                description: Prefix is the network prefix to use. If unset the prefix
-                  from the subnet will be used.
+                description: |-
+                  Prefix is the network prefix to use.
+                  If unset the prefix from the subnet will be used.
                 maximum: 128
                 type: integer
               start:
-                description: First is the first address that can be assigned. If unset,
-                  the second address of subnet will be used.
+                description: |-
+                  First is the first address that can be assigned.
+                  If unset, the second address of subnet will be used.
                 type: string
               subnet:
-                description: Subnet is the subnet to assign IP addresses from. Can
-                  be omitted if addresses or first, last and prefix are set.
+                description: |-
+                  Subnet is the subnet to assign IP addresses from.
+                  Can be omitted if addresses or first, last and prefix are set.
                 type: string
             type: object
           status:
@@ -105,21 +113,25 @@ spec:
                   IPs in the pool.
                 properties:
                   free:
-                    description: Free is the count of unallocated IPs in the pool.
+                    description: |-
+                      Free is the count of unallocated IPs in the pool.
                       Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   outOfRange:
-                    description: Out of Range is the count of allocated IPs in the
-                      pool that is not contained within spec.Addresses. Counts greater
-                      than int can contain will report as math.MaxInt.
+                    description: |-
+                      Out of Range is the count of allocated IPs in the pool that is not
+                      contained within spec.Addresses.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   total:
-                    description: Total is the total number of IPs configured for the
-                      pool. Counts greater than int can contain will report as math.MaxInt.
+                    description: |-
+                      Total is the total number of IPs configured for the pool.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   used:
-                    description: Used is the count of allocated IPs in the pool. Counts
-                      greater than int can contain will report as math.MaxInt.
+                    description: |-
+                      Used is the count of allocated IPs in the pool.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                 required:
                 - free
@@ -156,14 +168,19 @@ spec:
         description: InClusterIPPool is the Schema for the inclusterippools API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -171,21 +188,24 @@ spec:
             description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
               addresses:
-                description: Addresses is a list of IP addresses that can be assigned.
-                  This set of addresses can be non-contiguous.
+                description: |-
+                  Addresses is a list of IP addresses that can be assigned. This set of
+                  addresses can be non-contiguous.
                 items:
                   type: string
                 type: array
               allocateReservedIPAddresses:
-                description: AllocateReservedIPAddresses causes the provider to allocate
-                  the network address (the first address in the inferred subnet) and
-                  broadcast address (the last address in the inferred subnet) when
-                  IPv4. The provider will allocate the anycast address address (the
-                  first address in the inferred subnet) when IPv6.
+                description: |-
+                  AllocateReservedIPAddresses causes the provider to allocate the network
+                  address (the first address in the inferred subnet) and broadcast address
+                  (the last address in the inferred subnet) when IPv4. The provider will
+                  allocate the anycast address address (the first address in the inferred
+                  subnet) when IPv6.
                 type: boolean
               excludedAddresses:
-                description: ExcludedAddresses is a list of IP addresses, which will
-                  be excluded from the set of assignable IP addresses.
+                description: |-
+                  ExcludedAddresses is a list of IP addresses, which will be excluded from
+                  the set of assignable IP addresses.
                 items:
                   type: string
                 type: array
@@ -208,21 +228,25 @@ spec:
                   IPs in the pool.
                 properties:
                   free:
-                    description: Free is the count of unallocated IPs in the pool.
+                    description: |-
+                      Free is the count of unallocated IPs in the pool.
                       Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   outOfRange:
-                    description: Out of Range is the count of allocated IPs in the
-                      pool that is not contained within spec.Addresses. Counts greater
-                      than int can contain will report as math.MaxInt.
+                    description: |-
+                      Out of Range is the count of allocated IPs in the pool that is not
+                      contained within spec.Addresses.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   total:
-                    description: Total is the total number of IPs configured for the
-                      pool. Counts greater than int can contain will report as math.MaxInt.
+                    description: |-
+                      Total is the total number of IPs configured for the pool.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                   used:
-                    description: Used is the count of allocated IPs in the pool. Counts
-                      greater than int can contain will report as math.MaxInt.
+                    description: |-
+                      Used is the count of allocated IPs in the pool.
+                      Counts greater than int can contain will report as math.MaxInt.
                     type: integer
                 required:
                 - free
@@ -236,9 +260,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
