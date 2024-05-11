@@ -104,7 +104,10 @@ func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.B
 		Watches(
 			&v1alpha2.GlobalInClusterIPPool{},
 			handler.EnqueueRequestsFromMapFunc(i.inClusterIPPoolToIPClaims("GlobalInClusterIPPool")),
-			builder.WithPredicates(resourceTransitionedToUnpaused()),
+			builder.WithPredicates(predicate.Or(
+				resourceTransitionedToUnpaused(),
+				poolNoLongerEmpty(),
+			)),
 		).
 		Owns(&ipamv1.IPAddress{}, builder.WithPredicates(
 			ipampredicates.AddressReferencesPoolKind(metav1.GroupKind{
