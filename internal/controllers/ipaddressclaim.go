@@ -96,7 +96,10 @@ func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.B
 		Watches(
 			&v1alpha2.InClusterIPPool{},
 			handler.EnqueueRequestsFromMapFunc(i.inClusterIPPoolToIPClaims("InClusterIPPool")),
-			builder.WithPredicates(resourceTransitionedToUnpaused()),
+			builder.WithPredicates(predicate.Or(
+				resourceTransitionedToUnpaused(),
+				poolNoLongerEmpty(),
+			)),
 		).
 		Watches(
 			&v1alpha2.GlobalInClusterIPPool{},
@@ -253,6 +256,32 @@ func resourceTransitionedToUnpaused() predicate.Predicate {
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return !annotations.HasPaused(e.Object)
+		},
+	}
+}
+
+func poolStatus(o client.Object) *v1alpha2.InClusterIPPoolStatusIPAddresses {
+	if ipPool, ok := o.(*v1alpha2.InClusterIPPool); ok {
+		return ipPool.Status.Addresses
+	} else if ipPool, ok := o.(*v1alpha2.GlobalInClusterIPPool); ok {
+		return ipPool.Status.Addresses
+	}
+	return nil
+}
+
+// poolNoLongerEmpty only returns true if the Pool status previously had 0 free
+// addresses and now has free addresses.
+func poolNoLongerEmpty() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldStatus := poolStatus(e.ObjectOld)
+			newStatus := poolStatus(e.ObjectNew)
+			if oldStatus != nil && newStatus != nil {
+				if oldStatus.Free == 0 && newStatus.Free > 0 {
+					return true
+				}
+			}
+			return false
 		},
 	}
 }
