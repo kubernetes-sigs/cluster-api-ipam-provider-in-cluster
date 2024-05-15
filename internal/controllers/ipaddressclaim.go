@@ -264,12 +264,14 @@ func resourceTransitionedToUnpaused() predicate.Predicate {
 }
 
 func poolStatus(o client.Object) *v1alpha2.InClusterIPPoolStatusIPAddresses {
-	if ipPool, ok := o.(*v1alpha2.InClusterIPPool); ok {
+	switch ipPool := o.(type) {
+	case *v1alpha2.InClusterIPPool:
 		return ipPool.Status.Addresses
-	} else if ipPool, ok := o.(*v1alpha2.GlobalInClusterIPPool); ok {
+	case *v1alpha2.GlobalInClusterIPPool:
 		return ipPool.Status.Addresses
+	default:
+		return nil
 	}
-	return nil
 }
 
 // poolNoLongerEmpty only returns true if the Pool status previously had 0 free

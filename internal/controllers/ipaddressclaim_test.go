@@ -2045,7 +2045,7 @@ func deleteClaimUnchecked(name, namespace string) {
 			Namespace: namespace,
 		},
 	}
-	k8sClient.Delete(context.Background(), &claim)
+	_ = k8sClient.Delete(context.Background(), &claim)
 }
 
 func findAddress(name, namespace string) func() (client.Object, error) {
