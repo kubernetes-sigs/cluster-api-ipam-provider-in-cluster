@@ -39,11 +39,6 @@ endif
 
 HACK_BIN=$(shell pwd)/hack/bin
 
-# Set --output-base for conversion-gen if we are not within GOPATH
-ifneq ($(abspath $(ROOT_DIR)),$(shell go env GOPATH)/src/sigs.k8s.io/cluster-api-ipam-provider-in-cluster)
-	OUTPUT_BASE := --output-base=$(ROOT_DIR)
-endif
-
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -248,4 +243,4 @@ verify-boilerplate: ## Verifies all sources have appropriate boilerplate
 CONVERSION_GEN = $(HACK_BIN)/conversion-gen
 .PHONY: conversion-gen
 conversion-gen: ## Download conversion-gen locally if necessary.
-	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
+	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@v0.30.1
