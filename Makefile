@@ -28,7 +28,7 @@ ARCH ?= $(shell go env GOARCH)
 ALL_ARCH ?= amd64 arm64
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.26
+ENVTEST_K8S_VERSION = 1.29
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -79,9 +79,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: generate
 generate: controller-gen conversion-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	$(CONVERSION_GEN) --input-dirs=./api/v1alpha1 \
-		--output-file-base=zz_generated.conversion $(OUTPUT_BASE) \
-		--go-header-file=./hack/boilerplate.go.txt
+	$(CONVERSION_GEN) \
+		--output-file=zz_generated.conversion.go \
+		--go-header-file=./hack/boilerplate.go.txt \
+		./api/v1alpha1
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -223,7 +224,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 CONTROLLER_GEN = $(HACK_BIN)/controller-gen
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	env GOBIN=$(HACK_BIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0
+	env GOBIN=$(HACK_BIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0
 
 KUSTOMIZE = $(HACK_BIN)/kustomize
 .PHONY: kustomize
