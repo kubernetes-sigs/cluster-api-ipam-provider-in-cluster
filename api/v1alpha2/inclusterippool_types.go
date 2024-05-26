@@ -34,6 +34,10 @@ type InClusterIPPoolSpec struct {
 	// +optional
 	Gateway string `json:"gateway,omitempty"`
 
+	// Metric is the priority applied to a gateway route
+	// +optional
+	Metric *uint32 `json:"metric,omitempty"`
+
 	// AllocateReservedIPAddresses causes the provider to allocate the network
 	// address (the first address in the inferred subnet) and broadcast address
 	// (the last address in the inferred subnet) when IPv4. The provider will

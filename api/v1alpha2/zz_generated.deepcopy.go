@@ -150,6 +150,11 @@ func (in *InClusterIPPoolSpec) DeepCopyInto(out *InClusterIPPoolSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Metric != nil {
+		in, out := &in.Metric, &out.Metric
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.ExcludedAddresses != nil {
 		in, out := &in.ExcludedAddresses, &out.ExcludedAddresses
 		*out = make([]string, len(*in))

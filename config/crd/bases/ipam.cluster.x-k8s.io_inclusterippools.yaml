@@ -212,6 +212,10 @@ spec:
               gateway:
                 description: Gateway
                 type: string
+              metric:
+                description: Metric is the priority applied to a gateway route
+                format: int32
+                type: integer
               prefix:
                 description: Prefix is the network prefix to use.
                 maximum: 128

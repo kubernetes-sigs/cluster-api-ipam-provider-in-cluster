@@ -84,6 +84,20 @@ spec:
   allocateReservedIPAddresses: true
 ```
 
+To support using the `gateway` field as a default route, a metric can be added for informational purposes. 
+
+```yaml
+apiVersion: ipam.cluster.x-k8s.io/v1alpha2
+kind: InClusterIPPool
+metadata:
+  name: inclusterippool-sample
+spec:
+  addresses:
+    - 10.0.0.0/24
+  prefix: 24
+  gateway: 10.0.0.1
+  metric: 100
+```
 
 ## Community, discussion, contribution, and support
 
