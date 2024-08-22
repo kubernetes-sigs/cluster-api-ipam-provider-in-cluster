@@ -199,7 +199,7 @@ spec:
                   AllocateReservedIPAddresses causes the provider to allocate the network
                   address (the first address in the inferred subnet) and broadcast address
                   (the last address in the inferred subnet) when IPv4. The provider will
-                  allocate the anycast address address (the first address in the inferred
+                  allocate the anycast address (the first address in the inferred
                   subnet) when IPv6.
                 type: boolean
               excludedAddresses:
