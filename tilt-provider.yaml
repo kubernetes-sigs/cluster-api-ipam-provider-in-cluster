@@ -1,6 +1,6 @@
 name: "ipam-in-cluster"
 config:
-  image: "ghcr.io/telekom/cluster-api-ipam-provider-in-cluster"
+  image: "gcr.io/k8s-staging-capi-ipam-ic/cluster-api-ipam-in-cluster-controller"
   live_reload_deps:
   - main.go
   - go.mod
