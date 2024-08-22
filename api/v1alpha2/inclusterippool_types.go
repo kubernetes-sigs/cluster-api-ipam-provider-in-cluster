@@ -37,7 +37,7 @@ type InClusterIPPoolSpec struct {
 	// AllocateReservedIPAddresses causes the provider to allocate the network
 	// address (the first address in the inferred subnet) and broadcast address
 	// (the last address in the inferred subnet) when IPv4. The provider will
-	// allocate the anycast address address (the first address in the inferred
+	// allocate the anycast address (the first address in the inferred
 	// subnet) when IPv6.
 	// +optional
 	AllocateReservedIPAddresses bool `json:"allocateReservedIPAddresses,omitempty"`
@@ -113,7 +113,7 @@ type InClusterIPPoolList struct {
 
 // GlobalInClusterIPPool is the Schema for the global inclusterippools API.
 // This pool type is cluster scoped. IPAddressClaims can reference
-// pools of this type from any any namespace.
+// pools of this type from any namespace.
 type GlobalInClusterIPPool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

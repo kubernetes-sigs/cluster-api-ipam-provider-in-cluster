@@ -125,7 +125,7 @@ type InClusterIPPoolList struct {
 
 // GlobalInClusterIPPool is the Schema for the global inclusterippools API.
 // This pool type is cluster scoped. IPAddressClaims can reference
-// pools of this type from any any namespace.
+// pools of this type from any namespace.
 type GlobalInClusterIPPool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

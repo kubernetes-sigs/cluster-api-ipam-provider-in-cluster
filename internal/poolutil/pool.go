@@ -209,7 +209,7 @@ func IPSetCount(ipSet *netipx.IPSet) int {
 	// If total is greater than Uint64, Uint64() will return 0
 	// We want to display MaxInt if the value overflows what int can contain
 	if total.IsInt64() && total.Uint64() <= uint64(math.MaxInt) {
-		return int(total.Uint64())
+		return int(total.Uint64()) //nolint:gosec // [G115] conversion is safe with check beforehand
 	}
 	return math.MaxInt
 }

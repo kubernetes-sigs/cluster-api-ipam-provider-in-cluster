@@ -65,7 +65,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 				Expect(genericPool.PoolStatus().Addresses.Used).To(Equal(0))
 				Expect(genericPool.PoolStatus().Addresses.Free).To(Equal(expectedTotal))
 
-				for i := 0; i < expectedUsed; i++ {
+				for i := range expectedUsed {
 					claim := newClaim(fmt.Sprintf("test%d", i), namespace, poolType, genericPool.GetName())
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 					createdClaimNames = append(createdClaimNames, claim.Name)
@@ -140,7 +140,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 
 				Expect(k8sClient.Create(context.Background(), genericPool)).To(Succeed())
 
-				for i := 0; i < numClaims; i++ {
+				for i := range numClaims {
 					claim := newClaim(fmt.Sprintf("test%d", i), namespace, poolType, genericPool.GetName())
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 					createdClaimNames = append(createdClaimNames, claim.Name)
