@@ -81,6 +81,10 @@ func (r *ClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return fmt.Errorf("error setting the manager: Adapter is nil")
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &ipamv1.IPAddressClaim{}, "clusterName", indexClusterName); err != nil {
+		return fmt.Errorf("failed to register indexer for IPAddressClaim: %w", err)
+	}
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		// A Watch is added for the Cluster in the case that the Cluster is
@@ -118,7 +122,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	// Fetch the IPAddressClaim
 	claim := &ipamv1.IPAddressClaim{}
-	if err := r.Get(ctx, req.NamespacedName, claim); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, claim); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -126,18 +130,23 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	}
 
 	// Check if the owning cluster is paused
-	if _, ok := claim.GetLabels()[clusterv1.ClusterNameLabel]; ok {
-		cluster, err := clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
-				return ctrl.Result{}, nil
-			}
-
-			log.Error(err, "error fetching cluster linked to IPAddressClaim")
-			return ctrl.Result{}, err
+	var cluster *clusterv1.Cluster
+	var err error
+	if claim.Spec.ClusterName != "" {
+		cluster, err = clusterutil.GetClusterByName(ctx, r.Client, claim.Namespace, claim.Spec.ClusterName)
+	} else if _, ok := claim.GetLabels()[clusterv1.ClusterNameLabel]; ok {
+		cluster, err = clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
+	}
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
+			return ctrl.Result{}, nil
 		}
 
+		log.Error(err, "error fetching cluster linked to IPAddressClaim")
+		return ctrl.Result{}, err
+	}
+	if cluster != nil {
 		if annotations.IsPaused(cluster, cluster) {
 			log.Info("IPAddressClaim linked to a cluster that is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
@@ -273,12 +282,7 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 	claims := &ipamv1.IPAddressClaimList{}
-	err := r.Client.List(context.Background(), claims, client.MatchingLabels(
-		map[string]string{
-			clusterv1.ClusterNameLabel: a.GetName(),
-		},
-	))
-	if err != nil {
+	if err := r.Client.List(context.Background(), claims, client.MatchingFields{"clusterName": a.GetName()}); err != nil {
 		return requests
 	}
 	for _, c := range claims.Items {
@@ -291,6 +295,20 @@ func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) 
 		requests = append(requests, r)
 	}
 	return requests
+}
+
+func indexClusterName(object client.Object) []string {
+	claim, ok := object.(*ipamv1.IPAddressClaim)
+	if !ok {
+		return nil
+	}
+	if claim.Spec.ClusterName != "" {
+		return []string{claim.Spec.ClusterName}
+	}
+	if claim.Labels[clusterv1.ClusterNameLabel] != "" {
+		return []string{claim.Labels[clusterv1.ClusterNameLabel]}
+	}
+	return nil
 }
 
 func unwrapResult(res *ctrl.Result) ctrl.Result {

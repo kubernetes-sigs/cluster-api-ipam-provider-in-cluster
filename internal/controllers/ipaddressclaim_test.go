@@ -84,7 +84,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -218,7 +218,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -304,7 +304,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 
 				// verify none of the reserved addresses are allocated
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(1)))
 			})
@@ -629,7 +629,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -981,7 +981,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 					addresses := ipamv1.IPAddressList{}
-					Consistently(ObjectList(&addresses)).
+					Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(0)))
 
@@ -991,7 +991,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					err = patchHelper.Patch(ctx, &pool)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(ObjectList(&addresses)).
+					Eventually(ObjectList(&addresses, client.InNamespace(namespace))).
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 				})
@@ -1026,7 +1026,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 					claims := ipamv1.IPAddressClaimList{}
-					Eventually(ObjectList(&claims)).
+					Eventually(ObjectList(&claims, client.InNamespace(namespace))).
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 
@@ -1041,7 +1041,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					time.Sleep(1 * time.Second)
 
 					Expect(k8sClient.Delete(context.Background(), &claim)).To(Succeed())
-					Consistently(ObjectList(&claims)).
+					Consistently(ObjectList(&claims, client.InNamespace(namespace))).
 						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(1)))
 
@@ -1051,7 +1051,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					err = patchHelper.Patch(ctx, &pool)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(ObjectList(&claims)).
+					Eventually(ObjectList(&claims, client.InNamespace(namespace))).
 						WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(
 						HaveField("Items", HaveLen(0)))
 				})
@@ -1599,7 +1599,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 	})
 
-	Context("When the cluster is spec.paused true and the ipaddressclaim has the cluster-name label", func() {
+	Context("When the ipaddressclaim spec.clusterName references a paused cluster", func() {
 		const (
 			clusterName = "test-cluster"
 			poolName    = "test-pool"
@@ -1635,11 +1635,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
-						Labels: map[string]string{
-							clusterv1.ClusterNameLabel: clusterName,
-						},
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -1663,7 +1661,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Eventually(Get(&cluster)).Should(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -1673,11 +1671,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
-						Labels: map[string]string{
-							clusterv1.ClusterNameLabel: clusterName,
-						},
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -1702,7 +1698,44 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Eventually(Get(&cluster)).Should(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+
+			It("does not allocate an ipaddress upon creating a cluster when the cluster has spec.Paused", func() {
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: true,
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -1725,11 +1758,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
-						Labels: map[string]string{
-							clusterv1.ClusterNameLabel: clusterName,
-						},
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -1745,7 +1776,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -1768,11 +1799,9 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
-						Labels: map[string]string{
-							clusterv1.ClusterNameLabel: clusterName,
-						},
 					},
 					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
 						PoolRef: corev1.TypedLocalObjectReference{
 							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
 							Kind:     "InClusterIPPool",
@@ -1788,7 +1817,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -1814,7 +1843,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 
@@ -1822,7 +1851,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				cluster.Spec.Paused = false
 				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
 
-				Eventually(ObjectList(&addresses)).
+				Eventually(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(1)))
 			})
@@ -1845,6 +1874,46 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: namespace,
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+
+				// update the cluster
+				delete(cluster.Annotations, clusterv1.PausedAnnotation)
+				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
+
+				Eventually(ObjectList(&addresses, client.InNamespace(namespace))).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(1)))
+			})
+		})
+
+		Context("When the ipaddressclaim spec.clusterName reference a paused cluster via cluster label", func() {
+			AfterEach(func() {
+				deleteClaim("test", namespace)
+				deleteCluster(clusterName, namespace)
+				deleteNamespacedPool(poolName, namespace)
+			})
+
+			It("does not allocate an ipaddress upon creating a cluster when the cluster is paused", func() {
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
 						Labels: map[string]string{
 							clusterv1.ClusterNameLabel: clusterName,
 						},
@@ -1860,18 +1929,22 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 				Eventually(Get(&claim)).Should(Succeed())
 
+				cluster = clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      clusterName,
+						Namespace: namespace,
+					},
+					Spec: clusterv1.ClusterSpec{
+						Paused: true,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+				Eventually(Get(&cluster)).Should(Succeed())
+
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
-
-				// update the cluster
-				delete(cluster.Annotations, clusterv1.PausedAnnotation)
-				Expect(k8sClient.Update(context.Background(), &cluster)).To(Succeed())
-
-				Eventually(ObjectList(&addresses)).
-					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
-					HaveField("Items", HaveLen(1)))
 			})
 		})
 
@@ -1889,7 +1962,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Eventually(Get(&claim)).Should(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses)).
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
 			})
@@ -1931,7 +2004,7 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			Eventually(Get(&claim)).Should(Succeed())
 
 			addresses := ipamv1.IPAddressList{}
-			Consistently(ObjectList(&addresses)).
+			Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 				WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 				HaveField("Items", HaveLen(0)))
 

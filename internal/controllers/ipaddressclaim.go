@@ -78,7 +78,7 @@ var _ ipamutil.ClaimHandler = &IPAddressClaimHandler{}
 func (i *InClusterProviderAdapter) SetupWithManager(_ context.Context, b *ctrl.Builder) error {
 	b.
 		For(&ipamv1.IPAddressClaim{}, builder.WithPredicates(
-			predicate.Or(
+			predicate.Or[client.Object](
 				ipampredicates.ClaimReferencesPoolKind(metav1.GroupKind{
 					Group: v1alpha2.GroupVersion.Group,
 					Kind:  inClusterIPPoolKind,
