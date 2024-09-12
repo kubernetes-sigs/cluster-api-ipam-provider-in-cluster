@@ -5,6 +5,9 @@ on:
     tags:
     - 'v*'
 
+permissions:
+  contents: write # Allow creating a release.
+
 jobs:
   draft_release:
     name: Create Draft Release
