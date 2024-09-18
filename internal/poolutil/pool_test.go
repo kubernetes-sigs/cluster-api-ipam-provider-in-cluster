@@ -28,6 +28,23 @@ import (
 )
 
 var _ = Describe("PoolSpecToIPSet", func() {
+	It("should allow a pool spec with prefix /0", func() {
+		spec := &v1alpha2.InClusterIPPoolSpec{
+			Gateway: "192.168.0.1",
+			Prefix:  0,
+			Addresses: []string{
+				"192.168.0.3-192.168.0.10",
+			},
+		}
+		ipSet, err := PoolSpecToIPSet(spec)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSet.Contains(mustParse("192.168.0.3"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.3"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.5"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.6"))).To(BeTrue())
+		Expect(ipSet.Contains(mustParse("192.168.0.7"))).To(BeTrue())
+		Expect(IPSetCount(ipSet)).To(Equal(8))
+	})
 	It("converts a pool spec to a set", func() {
 		spec := &v1alpha2.InClusterIPPoolSpec{
 			Gateway: "192.168.0.1",

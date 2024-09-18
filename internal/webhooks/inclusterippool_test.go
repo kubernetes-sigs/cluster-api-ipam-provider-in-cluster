@@ -419,17 +419,6 @@ func TestInvalidScenarios(t *testing.T) {
 			expectedError: "provided address is not a valid IP, range, nor CIDR",
 		},
 		{
-			testcase: "omitting a prefix should not be allowed",
-			spec: v1alpha2.InClusterIPPoolSpec{
-				Addresses: []string{
-					"10.0.0.25",
-					"10.0.0.26",
-				},
-				Gateway: "10.0.0.1",
-			},
-			expectedError: "a valid prefix is required",
-		},
-		{
 			testcase: "specifying an invalid prefix",
 			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{
@@ -646,6 +635,63 @@ func TestInvalidScenarios(t *testing.T) {
 		runInvalidScenarioTests(t, tt, namespacedPool, webhook)
 		runInvalidScenarioTests(t, tt, globalPool, webhook)
 	}
+}
+
+func TestIPPool_Prefix(t *testing.T) {
+	g := NewWithT(t)
+
+	scheme := runtime.NewScheme()
+	g.Expect(ipamv1.AddToScheme(scheme)).To(Succeed())
+
+	namespacedPool := &v1alpha2.InClusterIPPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pool",
+		},
+		Spec: v1alpha2.InClusterIPPoolSpec{
+			Addresses: []string{"10.0.0.10-10.0.0.20"},
+			Prefix:    0,
+			Gateway:   "10.0.0.1",
+		},
+	}
+
+	globalPool := &v1alpha2.GlobalInClusterIPPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pool",
+		},
+		Spec: v1alpha2.InClusterIPPoolSpec{
+			Addresses: []string{"10.0.0.10-10.0.0.20"},
+			Prefix:    0,
+			Gateway:   "10.0.0.1",
+		},
+	}
+	emptyPrefixPool := &v1alpha2.InClusterIPPool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pool",
+		},
+		Spec: v1alpha2.InClusterIPPoolSpec{
+			Addresses: []string{"10.0.0.10-10.0.0.20"},
+			Gateway:   "10.0.0.1",
+		},
+	}
+
+	ips := []client.Object{
+		createIP("my-ip", "10.0.0.10", namespacedPool),
+		createIP("my-ip-2", "10.0.0.10", globalPool),
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(ips...).
+		WithIndex(&ipamv1.IPAddress{}, index.IPAddressPoolRefCombinedField, index.IPAddressByCombinedPoolRef).
+		Build()
+
+	webhook := InClusterIPPool{
+		Client: fakeClient,
+	}
+
+	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, namespacedPool)).Error().To(BeNil(), "should allow /0 prefix InClusterIPPool")
+	g.Expect(webhook.validate(&v1alpha2.GlobalInClusterIPPool{}, globalPool)).Error().To(BeNil(), "should allow /0 prefix GlobalInClusterIPPool")
+	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, emptyPrefixPool)).Error().To(BeNil(), "should allow empty prefix InClusterIPPool")
 }
 
 func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.GenericInClusterPool, webhook InClusterIPPool) {
