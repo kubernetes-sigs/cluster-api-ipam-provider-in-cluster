@@ -28,6 +28,7 @@ type InClusterIPPoolSpec struct {
 
 	// Prefix is the network prefix to use.
 	// +kubebuilder:validation:Maximum=128
+	// +kubebuilder:validation:Minimum=0
 	Prefix int `json:"prefix"`
 
 	// Gateway

@@ -419,6 +419,18 @@ func TestInvalidScenarios(t *testing.T) {
 			expectedError: "provided address is not a valid IP, range, nor CIDR",
 		},
 		{
+			testcase: "negative prefix not allowed",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.25",
+					"10.0.0.26",
+				},
+				Prefix:  -1,
+				Gateway: "10.0.0.1",
+			},
+			expectedError: "a valid prefix is required",
+		},
+		{
 			testcase: "specifying an invalid prefix",
 			spec: v1alpha2.InClusterIPPoolSpec{
 				Addresses: []string{

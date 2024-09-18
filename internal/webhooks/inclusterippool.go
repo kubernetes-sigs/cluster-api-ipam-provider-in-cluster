@@ -185,6 +185,10 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "addresses"), newPool.PoolSpec().Addresses, "addresses is required"))
 	}
 
+	if newPool.PoolSpec().Prefix < 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "prefix"), newPool.PoolSpec().Addresses, "a valid prefix is required"))
+	}
+
 	var hasIPv4Addr, hasIPv6Addr bool
 	for _, address := range newPool.PoolSpec().Addresses {
 		ipSet, err := poolutil.AddressToIPSet(address)

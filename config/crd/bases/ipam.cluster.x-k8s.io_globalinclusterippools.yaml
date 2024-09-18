@@ -217,6 +217,7 @@ spec:
               prefix:
                 description: Prefix is the network prefix to use.
                 maximum: 128
+                minimum: 0
                 type: integer
             required:
             - addresses
