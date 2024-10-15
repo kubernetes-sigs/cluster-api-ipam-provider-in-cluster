@@ -1902,6 +1902,36 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			})
 		})
 
+		Context("When the cluster can not be retrieved", func() {
+			AfterEach(func() {
+				deleteClaim("test", namespace)
+				deleteNamespacedPool(poolName, namespace)
+			})
+			It("When the cluster cannot be retrieved", func() {
+				claim := ipamv1.IPAddressClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: namespace,
+					},
+					Spec: ipamv1.IPAddressClaimSpec{
+						ClusterName: clusterName,
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
+							Kind:     "InClusterIPPool",
+							Name:     poolName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
+
+				addresses := ipamv1.IPAddressList{}
+				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Items", HaveLen(0)))
+			})
+		})
+
 		Context("When the ipaddressclaim spec.clusterName reference a paused cluster via cluster label", func() {
 			AfterEach(func() {
 				deleteClaim("test", namespace)
