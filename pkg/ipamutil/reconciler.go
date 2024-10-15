@@ -139,6 +139,9 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
+			}
 			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
