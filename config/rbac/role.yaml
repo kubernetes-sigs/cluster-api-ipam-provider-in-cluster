@@ -77,7 +77,7 @@ rules:
 - apiGroups:
   - ipam.cluster.x-k8s.io
   resources:
-  - ipaddressclaims/status
+  - ipaddressclaims/finalizers
   - ipaddresses/finalizers
   verbs:
   - update
