@@ -44,14 +44,6 @@ import (
 	pooltypes "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
-const (
-	// ReleaseAddressFinalizer is used to release an IP address before cleaning up the claim.
-	ReleaseAddressFinalizer = "ipam.cluster.x-k8s.io/ReleaseAddress"
-
-	// ProtectAddressFinalizer is used to prevent deletion of an IPAddress object while its claim is not deleted.
-	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
-)
-
 type genericInClusterPool interface {
 	client.Object
 	PoolSpec() *v1alpha2.InClusterIPPoolSpec
