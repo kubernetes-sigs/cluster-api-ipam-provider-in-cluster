@@ -44,14 +44,6 @@ import (
 	pooltypes "sigs.k8s.io/cluster-api-ipam-provider-in-cluster/pkg/types"
 )
 
-const (
-	// ReleaseAddressFinalizer is used to release an IP address before cleaning up the claim.
-	ReleaseAddressFinalizer = "ipam.cluster.x-k8s.io/ReleaseAddress"
-
-	// ProtectAddressFinalizer is used to prevent deletion of an IPAddress object while its claim is not deleted.
-	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
-)
-
 type genericInClusterPool interface {
 	client.Object
 	PoolSpec() *v1alpha2.InClusterIPPoolSpec
@@ -166,7 +158,7 @@ func (i *InClusterProviderAdapter) ClaimHandlerFor(_ client.Client, claim *ipamv
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims/status;ipaddresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims/status;ipaddresses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=ipam.cluster.x-k8s.io,resources=ipaddressclaims/finalizers;ipaddresses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
 
 // FetchPool fetches the (Global)InClusterIPPool.
