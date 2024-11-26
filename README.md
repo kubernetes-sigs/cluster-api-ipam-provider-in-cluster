@@ -85,6 +85,10 @@ spec:
 ```
 
 
+### IPv6 Status Limitations
+
+This provider does fully support IPv6 pools, but they come with a small limitation related to the pools' status. Since the IPv6 address space is very large it exceeds the int64 range, making it cumbersome to calculate the total amount of available addresses for large pools. The status will therefore be limited to the maximum int64 value (2^64), even when more addresses are available. Since the Kubernetes api server will probably not allow storing enough resources to exhaust the pool anyway, we've decided to keep this limitation in favour of simpler implementation.
+
 ## Community, discussion, contribution, and support
 
 The in-cluster IPAM provider is part of the cluster-api project. Please refer to it's [readme](https://github.com/kubernetes-sigs/cluster-api?tab=readme-ov-file#-community-discussion-contribution-and-support) for information on how to connect with the project.
