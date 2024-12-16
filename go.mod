@@ -6,7 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/onsi/ginkgo/v2 v2.22.0
-	github.com/onsi/gomega v1.36.0
+	github.com/onsi/gomega v1.36.1
 	github.com/pkg/errors v0.9.1
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	k8s.io/api v0.30.3
