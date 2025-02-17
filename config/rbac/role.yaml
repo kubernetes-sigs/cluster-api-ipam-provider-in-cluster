@@ -16,6 +16,8 @@ rules:
   - ipam.cluster.x-k8s.io
   resources:
   - globalinclusterippools
+  - inclusterippools
+  - ipaddresses
   verbs:
   - create
   - delete
@@ -28,55 +30,7 @@ rules:
   - ipam.cluster.x-k8s.io
   resources:
   - globalinclusterippools/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
-  - globalinclusterippools/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
-  - inclusterippools
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
   - inclusterippools/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
-  - inclusterippools/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
-  - ipaddressclaims
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ipam.cluster.x-k8s.io
-  resources:
   - ipaddressclaims/finalizers
   - ipaddresses/finalizers
   verbs:
@@ -84,6 +38,8 @@ rules:
 - apiGroups:
   - ipam.cluster.x-k8s.io
   resources:
+  - globalinclusterippools/status
+  - inclusterippools/status
   - ipaddressclaims/status
   - ipaddresses/status
   verbs:
@@ -93,10 +49,8 @@ rules:
 - apiGroups:
   - ipam.cluster.x-k8s.io
   resources:
-  - ipaddresses
+  - ipaddressclaims
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch

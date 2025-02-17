@@ -86,7 +86,7 @@ func (r *ClaimReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	}
 
 	b := ctrl.NewControllerManagedBy(mgr).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		// A Watch is added for the Cluster in the case that the Cluster is
 		// unpaused so that a request can be queued to re-reconcile the
 		// IPAddressClaim.
