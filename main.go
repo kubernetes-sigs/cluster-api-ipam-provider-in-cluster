@@ -137,9 +137,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&webhooks.InClusterIPPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "InClusterIPPool")
-		os.Exit(1)
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := (&webhooks.InClusterIPPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "InClusterIPPool")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 
