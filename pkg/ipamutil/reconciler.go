@@ -140,7 +140,14 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
+				if err := r.reconcileDelete(ctx, claim); err != nil {
+					return ctrl.Result{}, fmt.Errorf("reconcile delete: %w", err)
+				}
+				// we'll need to explicitly update the claim here since we haven't set up a patch helper yet.
+				if err := r.Client.Update(ctx, claim); err != nil {
+					return ctrl.Result{}, fmt.Errorf("patch after reconciling delete: %w", err)
+				}
+				return ctrl.Result{}, nil
 			}
 			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
 			return ctrl.Result{}, nil
