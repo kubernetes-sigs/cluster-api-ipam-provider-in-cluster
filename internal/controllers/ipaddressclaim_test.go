@@ -1903,32 +1903,47 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 		})
 
 		Context("When the cluster can not be retrieved", func() {
-			AfterEach(func() {
-				deleteClaim("test", namespace)
-				deleteNamespacedPool(poolName, namespace)
-			})
-			It("When the cluster cannot be retrieved", func() {
-				claim := ipamv1.IPAddressClaim{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: namespace,
-					},
-					Spec: ipamv1.IPAddressClaimSpec{
-						ClusterName: clusterName,
-						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
-							Kind:     "InClusterIPPool",
-							Name:     poolName,
-						},
-					},
-				}
-				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
-				Eventually(Get(&claim)).Should(Succeed())
+			When("the claim is not fulfilled", func() {
+				AfterEach(func() {
+					deleteClaim("test", namespace)
+					deleteNamespacedPool(poolName, namespace)
+				})
+				It("does not allocate an address", func() {
+					claim := newClaim("test", namespace, "InClusterIPPool", poolName)
+					claim.Spec.ClusterName = clusterName
+					claim.Finalizers = []string{ipamutil.ReleaseAddressFinalizer}
+					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+					Eventually(Get(&claim)).Should(Succeed())
 
-				addresses := ipamv1.IPAddressList{}
-				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
-					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
-					HaveField("Items", HaveLen(0)))
+					addresses := ipamv1.IPAddressList{}
+					Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
+						WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+						HaveField("Items", HaveLen(0)))
+				})
+			})
+
+			When("the claim was fulfilled and is deleted", func() {
+				It("releases the IP address", func() {
+					// does not need to be paused, as the cluster just exists to allow the claim to be fulfilled before deleting the cluster again
+					cluster := clusterv1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      clusterName,
+							Namespace: namespace,
+						},
+					}
+					Expect(k8sClient.Create(context.Background(), &cluster)).To(Succeed())
+					Eventually(Get(&cluster)).Should(Succeed())
+					claim := newClaim("test", namespace, "InClusterIPPool", poolName)
+					claim.Spec.ClusterName = clusterName
+					claim.Finalizers = []string{ipamutil.ReleaseAddressFinalizer}
+					Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+					Eventually(Get(&claim)).Should(Succeed())
+
+					deleteCluster(clusterName, namespace)
+
+					Expect(k8sClient.Delete(context.Background(), &claim)).To(Succeed())
+					Eventually(Get(&claim)).ShouldNot(Succeed())
+				})
 			})
 		})
 
