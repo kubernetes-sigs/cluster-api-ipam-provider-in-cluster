@@ -1,6 +1,6 @@
 module sigs.k8s.io/cluster-api-ipam-provider-in-cluster
 
-go 1.23.6
+go 1.23.4
 
 require (
 	github.com/onsi/ginkgo/v2 v2.22.2
