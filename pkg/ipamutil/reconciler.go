@@ -140,7 +140,15 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
-				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
+				patch := client.MergeFrom(claim.DeepCopy())
+				if err := r.reconcileDelete(ctx, claim); err != nil {
+					return ctrl.Result{}, fmt.Errorf("reconcile delete: %w", err)
+				}
+				// we'll need to explicitly patch the claim here since we haven't set up a patch helper yet.
+				if err := r.Client.Patch(ctx, claim, patch); err != nil {
+					return ctrl.Result{}, fmt.Errorf("patch after reconciling delete: %w", err)
+				}
+				return ctrl.Result{}, nil
 			}
 			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
 			return ctrl.Result{}, nil
@@ -265,8 +273,9 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 
 	if address.Name != "" {
 		var err error
+		patch := client.MergeFrom(address.DeepCopy())
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
-			if err = r.Client.Update(ctx, address); err != nil && !apierrors.IsNotFound(err) {
+			if err = r.Client.Patch(ctx, address, patch); err != nil && !apierrors.IsNotFound(err) {
 				return errors.Wrap(err, "failed to remove address finalizer")
 			}
 		}
