@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
@@ -65,6 +66,10 @@ func main() {
 		probeAddr            string
 		watchNamespace       string
 		watchFilter          string
+		webhookPort          int
+		webhookCertDir       string
+		webhookCertName      string
+		webhookKeyName       string
 	)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -74,6 +79,10 @@ func main() {
 	flag.StringVar(&watchNamespace, "namespace", "",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
 	flag.StringVar(&watchFilter, "watch-filter", "", "")
+	flag.IntVar(&webhookPort, "webhook-port", 9443, "Webhook Server port.")
+	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/", "Webhook cert dir.")
+	flag.StringVar(&webhookCertName, "webhook-cert-name", "tls.crt", "Webhook cert name.")
+	flag.StringVar(&webhookKeyName, "webhook-key-name", "tls.key", "Webhook key name.")
 	flag.Parse()
 
 	// klog.Background will automatically use the right logger.
@@ -89,6 +98,14 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "7bb7acb4.ipam.cluster.x-k8s.io",
+		WebhookServer: webhook.NewServer(
+			webhook.Options{
+				Port:     webhookPort,
+				CertDir:  webhookCertDir,
+				CertName: webhookCertName,
+				KeyName:  webhookKeyName,
+			},
+		),
 	}
 
 	if watchNamespace != "" {
@@ -137,9 +154,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&webhooks.InClusterIPPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "InClusterIPPool")
-		os.Exit(1)
+	if webhookPort != 0 {
+		if err := (&webhooks.InClusterIPPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "InClusterIPPool")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 
