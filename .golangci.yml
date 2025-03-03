@@ -46,13 +46,13 @@ linters:
     - rowserrcheck
     - staticcheck
     - stylecheck
-    - tenv
     - thelper
     - typecheck
     - unconvert
     - unparam
     - unused
     - usestdlibvars
+    - usetesting
     - whitespace
 
 linters-settings:
@@ -118,7 +118,6 @@ linters-settings:
         alias: ipamv1
   nolintlint:
     allow-unused: false
-    allow-leading-space: false
     require-specific: true
   revive:
     rules:
