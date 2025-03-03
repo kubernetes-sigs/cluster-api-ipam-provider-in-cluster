@@ -78,13 +78,13 @@ func TestPoolDeletionWithExistingIPAddresses(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().NotTo(BeNil(), "should not allow deletion when claims exist")
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().NotTo(BeNil(), "should not allow deletion when claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().To(HaveOccurred(), "should not allow deletion when claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().To(HaveOccurred(), "should not allow deletion when claims exist")
 
 	g.Expect(fakeClient.DeleteAllOf(ctx, &ipamv1.IPAddress{})).To(Succeed())
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().To(BeNil(), "should allow deletion when no claims exist")
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().To(BeNil(), "should allow deletion when no claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().NotTo(HaveOccurred(), "should allow deletion when no claims exist")
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().NotTo(HaveOccurred(), "should allow deletion when no claims exist")
 }
 
 func TestUpdatingPoolInUseAddresses(t *testing.T) {
@@ -135,8 +135,8 @@ func TestUpdatingPoolInUseAddresses(t *testing.T) {
 	namespacedPool.Spec.Addresses = []string{"10.0.0.15-10.0.0.20"}
 	globalPool.Spec.Addresses = []string{"10.0.0.15-10.0.0.20"}
 
-	g.Expect(webhook.ValidateUpdate(ctx, oldNamespacedPool, namespacedPool)).Error().NotTo(BeNil(), "should not allow removing in use IPs from addresses field in pool")
-	g.Expect(webhook.ValidateUpdate(ctx, oldGlobalPool, globalPool)).Error().NotTo(BeNil(), "should not allow removing in use IPs from addresses field in pool")
+	g.Expect(webhook.ValidateUpdate(ctx, oldNamespacedPool, namespacedPool)).Error().To(HaveOccurred(), "should not allow removing in use IPs from addresses field in pool")
+	g.Expect(webhook.ValidateUpdate(ctx, oldGlobalPool, globalPool)).Error().To(HaveOccurred(), "should not allow removing in use IPs from addresses field in pool")
 }
 
 func TestDeleteSkip(t *testing.T) {
@@ -188,8 +188,8 @@ func TestDeleteSkip(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().To(BeNil())
-	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().To(BeNil())
+	g.Expect(webhook.ValidateDelete(ctx, namespacedPool)).Error().NotTo(HaveOccurred())
+	g.Expect(webhook.ValidateDelete(ctx, globalPool)).Error().NotTo(HaveOccurred())
 }
 
 func TestInClusterIPPoolDefaulting(t *testing.T) {
@@ -701,9 +701,9 @@ func TestIPPool_Prefix(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, namespacedPool)).Error().To(BeNil(), "should allow /0 prefix InClusterIPPool")
-	g.Expect(webhook.validate(&v1alpha2.GlobalInClusterIPPool{}, globalPool)).Error().To(BeNil(), "should allow /0 prefix GlobalInClusterIPPool")
-	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, emptyPrefixPool)).Error().To(BeNil(), "should allow empty prefix InClusterIPPool")
+	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, namespacedPool)).Error().NotTo(HaveOccurred(), "should allow /0 prefix InClusterIPPool")
+	g.Expect(webhook.validate(&v1alpha2.GlobalInClusterIPPool{}, globalPool)).Error().NotTo(HaveOccurred(), "should allow /0 prefix GlobalInClusterIPPool")
+	g.Expect(webhook.validate(&v1alpha2.InClusterIPPool{}, emptyPrefixPool)).Error().NotTo(HaveOccurred(), "should allow empty prefix InClusterIPPool")
 }
 
 func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.GenericInClusterPool, webhook InClusterIPPool) {
