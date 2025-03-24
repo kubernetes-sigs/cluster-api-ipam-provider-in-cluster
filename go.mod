@@ -3,7 +3,7 @@ module sigs.k8s.io/cluster-api-ipam-provider-in-cluster
 go 1.23.4
 
 require (
-	github.com/onsi/ginkgo/v2 v2.23.0
+	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.2
 	github.com/pkg/errors v0.9.1
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
