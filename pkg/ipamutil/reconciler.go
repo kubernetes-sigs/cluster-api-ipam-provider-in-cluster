@@ -176,7 +176,9 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		}
 	}()
 
-	controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
+	if controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer) {
+		return ctrl.Result{}, nil
+	}
 
 	var res *reconcile.Result
 	var pool client.Object
