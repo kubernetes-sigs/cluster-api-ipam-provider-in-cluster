@@ -170,14 +170,10 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		return ctrl.Result{}, err
 	}
 
-	defer func() {
-		if err := patchHelper.Patch(ctx, claim); err != nil {
-			reterr = kerrors.NewAggregate([]error{reterr, err})
-		}
-	}()
-
 	if controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer) {
-		return ctrl.Result{}, nil
+		if err := patchHelper.Patch(ctx, claim); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	var res *reconcile.Result
@@ -187,7 +183,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	handler := r.Adapter.ClaimHandlerFor(r.Client, claim)
 	if pool, res, err = handler.FetchPool(ctx); err != nil || res != nil {
 		if apierrors.IsNotFound(err) {
-			err := errors.New("pool not found")
+			err := fmt.Errorf("pool not found: %w", err)
 			log.Error(err, "the referenced pool could not be found")
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 				return r.reconcileDelete(ctx, claim, handler)
@@ -211,6 +207,12 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, claim, handler)
 	}
+
+	defer func() {
+		if err := patchHelper.Patch(ctx, claim); err != nil {
+			reterr = kerrors.NewAggregate([]error{reterr, err})
+		}
+	}()
 
 	// We always ensure there is a valid address object passed to the handler.
 	// The handler will complete it with the ip address.
@@ -289,7 +291,12 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 		}
 	}
 
-	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
+	p := client.MergeFrom(claim.DeepCopy())
+	if controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer) {
+		if err := r.Client.Patch(ctx, claim, p); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to remove claim finalizer")
+		}
+	}
 	return ctrl.Result{}, nil
 }
 
