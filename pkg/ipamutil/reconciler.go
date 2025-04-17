@@ -187,7 +187,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	handler := r.Adapter.ClaimHandlerFor(r.Client, claim)
 	if pool, res, err = handler.FetchPool(ctx); err != nil || res != nil {
 		if apierrors.IsNotFound(err) {
-			err := errors.New("pool not found")
+			err := fmt.Errorf("pool not found: %w", err)
 			log.Error(err, "the referenced pool could not be found")
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 				return r.reconcileDelete(ctx, claim, handler)
