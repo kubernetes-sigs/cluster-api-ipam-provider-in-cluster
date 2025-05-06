@@ -122,7 +122,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	// Fetch the IPAddressClaim
 	claim := &ipamv1.IPAddressClaim{}
-	if err := r.Client.Get(ctx, req.NamespacedName, claim); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, claim); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -139,13 +139,13 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+			if !claim.DeletionTimestamp.IsZero() {
 				patch := client.MergeFrom(claim.DeepCopy())
 				if err := r.reconcileDelete(ctx, claim); err != nil {
 					return ctrl.Result{}, fmt.Errorf("reconcile delete: %w", err)
 				}
 				// we'll need to explicitly patch the claim here since we haven't set up a patch helper yet.
-				if err := r.Client.Patch(ctx, claim, patch); err != nil {
+				if err := r.Patch(ctx, claim, patch); err != nil {
 					return ctrl.Result{}, fmt.Errorf("patch after reconciling delete: %w", err)
 				}
 				return ctrl.Result{}, nil
@@ -187,7 +187,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		if apierrors.IsNotFound(err) {
 			err := errors.New("pool not found")
 			log.Error(err, "the referenced pool could not be found")
-			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+			if !claim.DeletionTimestamp.IsZero() {
 				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
 			}
 			return ctrl.Result{}, nil
@@ -207,7 +207,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	}
 
 	// If the claim is marked for deletion, release the address.
-	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !claim.DeletionTimestamp.IsZero() {
 		if res, err := handler.ReleaseAddress(ctx); err != nil {
 			return unwrapResult(res), err
 		}
@@ -267,7 +267,7 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 		Namespace: claim.Namespace,
 		Name:      claim.Name,
 	}
-	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
+	if err := r.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed to fetch address")
 	}
 
@@ -275,13 +275,13 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 		var err error
 		patch := client.MergeFrom(address.DeepCopy())
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
-			if err = r.Client.Patch(ctx, address, patch); err != nil && !apierrors.IsNotFound(err) {
+			if err = r.Patch(ctx, address, patch); err != nil && !apierrors.IsNotFound(err) {
 				return errors.Wrap(err, "failed to remove address finalizer")
 			}
 		}
 
 		if err == nil {
-			if err := r.Client.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
+			if err := r.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
 		}
@@ -294,7 +294,7 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 	claims := &ipamv1.IPAddressClaimList{}
-	if err := r.Client.List(context.Background(), claims, client.MatchingFields{"clusterName": a.GetName()}); err != nil {
+	if err := r.List(context.Background(), claims, client.MatchingFields{"clusterName": a.GetName()}); err != nil {
 		return requests
 	}
 	for _, c := range claims.Items {

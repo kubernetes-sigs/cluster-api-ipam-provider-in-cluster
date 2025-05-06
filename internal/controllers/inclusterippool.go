@@ -131,7 +131,7 @@ func (r *InClusterIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info("Reconciling pool")
 
 	pool := &v1alpha2.InClusterIPPool{}
-	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, pool); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch InClusterIPPool")
 		}
@@ -151,7 +151,7 @@ func (r *GlobalInClusterIPPoolReconciler) Reconcile(ctx context.Context, req ctr
 	log.Info("Reconciling pool")
 
 	pool := &v1alpha2.GlobalInClusterIPPool{}
-	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, pool); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "failed to fetch GlobalInClusterIPPool")
 		}

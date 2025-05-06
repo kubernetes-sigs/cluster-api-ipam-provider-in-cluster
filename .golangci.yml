@@ -226,6 +226,9 @@ linters:
       - linters:
           - goconst
         path: (.+)_test\.go
+      - linters:
+          - staticcheck
+        text: 'QF1003: could use tagged switch on .*'
     paths:
       - zz_generated.*\.go$
       - vendored_openapi\.go$
