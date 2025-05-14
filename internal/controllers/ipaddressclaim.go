@@ -167,13 +167,13 @@ func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (client.Object, *
 
 	if h.claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
-		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
+		if err := h.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
 			return nil, nil, errors.Wrap(err, "failed to fetch pool")
 		}
 		h.pool = icippool
 	} else if h.claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		gicippool := &v1alpha2.GlobalInClusterIPPool{}
-		if err := h.Client.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil {
+		if err := h.Get(ctx, types.NamespacedName{Name: h.claim.Spec.PoolRef.Name}, gicippool); err != nil {
 			return nil, nil, err
 		}
 		h.pool = gicippool
