@@ -68,10 +68,16 @@ type ProviderAdapter interface {
 // ClaimHandler knows how to allocate and release IP addresses for a specific provider.
 type ClaimHandler interface {
 	// FetchPool is called to fetch the pool referenced by the claim. The pool needs to be stored by the handler.
+	// This method is called before EnsureAddress and ReleaseAddress.
+	// Note that the ClaimReconciler will call the ReleaseAddress method regardless whether fetching the pool was
+	// successful or not.
 	FetchPool(ctx context.Context) (client.Object, *ctrl.Result, error)
 	// EnsureAddress is called to make sure that the IPAddress.Spec is correct and the address is allocated.
+	// It will only be called when FetchPool was successful.
 	EnsureAddress(ctx context.Context, address *ipamv1.IPAddress) (*ctrl.Result, error)
 	// ReleaseAddress is called to release the ip address that was allocated for the claim.
+	// It will be called even if FetchPool was not successful when reconciling a deleted claim, so there is no guarantee
+	// that the claim is available in the handler.
 	ReleaseAddress(ctx context.Context) (*ctrl.Result, error)
 }
 
@@ -138,24 +144,18 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		cluster, err = clusterutil.GetClusterFromMetadata(ctx, r.Client, claim.ObjectMeta)
 	}
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			if !claim.DeletionTimestamp.IsZero() {
-				patch := client.MergeFrom(claim.DeepCopy())
-				if err := r.reconcileDelete(ctx, claim); err != nil {
-					return ctrl.Result{}, fmt.Errorf("reconcile delete: %w", err)
-				}
-				// we'll need to explicitly patch the claim here since we haven't set up a patch helper yet.
-				if err := r.Patch(ctx, claim, patch); err != nil {
-					return ctrl.Result{}, fmt.Errorf("patch after reconciling delete: %w", err)
-				}
-				return ctrl.Result{}, nil
-			}
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "error fetching cluster linked to IPAddressClaim")
+			return ctrl.Result{}, err
+		}
+		if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+			// In case the claim is deleted, we'll process it even when we can't find the cluster. During cluster deletion it
+			// can happen that the Cluster object is released before all claims are cleaned up, which would block the claims indefinitely.
+			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, proceeding with deletion")
+		} else {
 			log.Info("IPAddressClaim linked to a cluster that is not found, unable to determine cluster's paused state, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
-
-		log.Error(err, "error fetching cluster linked to IPAddressClaim")
-		return ctrl.Result{}, err
 	}
 	if cluster != nil {
 		if annotations.IsPaused(cluster, cluster) {
@@ -176,7 +176,9 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		}
 	}()
 
-	controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer)
+	if controllerutil.AddFinalizer(claim, ReleaseAddressFinalizer) {
+		return ctrl.Result{}, nil
+	}
 
 	var res *reconcile.Result
 	var pool client.Object
@@ -185,10 +187,10 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	handler := r.Adapter.ClaimHandlerFor(r.Client, claim)
 	if pool, res, err = handler.FetchPool(ctx); err != nil || res != nil {
 		if apierrors.IsNotFound(err) {
-			err := errors.New("pool not found")
+			err := fmt.Errorf("pool not found: %w", err)
 			log.Error(err, "the referenced pool could not be found")
-			if !claim.DeletionTimestamp.IsZero() {
-				return ctrl.Result{}, r.reconcileDelete(ctx, claim)
+			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+				return r.reconcileDelete(ctx, claim, handler)
 			}
 			return ctrl.Result{}, nil
 		}
@@ -206,12 +208,8 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		return ctrl.Result{}, nil
 	}
 
-	// If the claim is marked for deletion, release the address.
-	if !claim.DeletionTimestamp.IsZero() {
-		if res, err := handler.ReleaseAddress(ctx); err != nil {
-			return unwrapResult(res), err
-		}
-		return ctrl.Result{}, r.reconcileDelete(ctx, claim)
+	if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, claim, handler)
 	}
 
 	// We always ensure there is a valid address object passed to the handler.
@@ -261,34 +259,38 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	return ctrl.Result{}, nil
 }
 
-func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim) error {
+func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim, handler ClaimHandler) (ctrl.Result, error) {
+	if res, err := handler.ReleaseAddress(ctx); err != nil {
+		return unwrapResult(res), fmt.Errorf("release address: %w", err)
+	}
+
 	address := &ipamv1.IPAddress{}
 	namespacedName := types.NamespacedName{
 		Namespace: claim.Namespace,
 		Name:      claim.Name,
 	}
-	if err := r.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrap(err, "failed to fetch address")
+	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
 	}
 
 	if address.Name != "" {
 		var err error
-		patch := client.MergeFrom(address.DeepCopy())
+		p := client.MergeFrom(address.DeepCopy())
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
-			if err = r.Patch(ctx, address, patch); err != nil && !apierrors.IsNotFound(err) {
-				return errors.Wrap(err, "failed to remove address finalizer")
+			if err = r.Client.Patch(ctx, address, p); err != nil && !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, errors.Wrap(err, "failed to remove address finalizer")
 			}
 		}
 
 		if err == nil {
-			if err := r.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
-				return err
+			if err := r.Client.Delete(ctx, address); err != nil && !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
 			}
 		}
 	}
 
 	controllerutil.RemoveFinalizer(claim, ReleaseAddressFinalizer)
-	return nil
+	return ctrl.Result{}, nil
 }
 
 func (r *ClaimReconciler) clusterToIPClaims(_ context.Context, a client.Object) []reconcile.Request {

@@ -229,6 +229,9 @@ linters:
       - linters:
           - staticcheck
         text: 'QF1003: could use tagged switch on .*'
+      - linters:
+          - staticcheck
+        text: 'QF1008: could remove embedded field'
     paths:
       - zz_generated.*\.go$
       - vendored_openapi\.go$
