@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# global ARGs used in base images
 ARG ARCH
 
 # Build the manager binary
-FROM golang:1.23 as builder
+FROM golang:1.23 AS builder
+
+# builder ARGs. No inheritance from global ARGs, so we need to redeclare them.
+ARG ARCH
+ARG ldflags
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -32,13 +37,12 @@ COPY api/ api/
 COPY internal/ internal/
 COPY pkg/ pkg/
 
-ARG ldflags
-
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} \
-    go build -trimpath -ldflags "${ldflags}" -a -o manager main.go
+    go build -trimpath -ldflags "${ldflags} -extldflags '-static'" \
+    -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

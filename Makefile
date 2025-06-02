@@ -103,7 +103,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: licenses-report ## Build docker image with the manager.
-	ARCH=$(ARCH) docker build --build-arg ARCH=$(ARCH)  -t $(STAGING_IMG)-$(ARCH):$(TAG) .
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=$(ARCH) -t $(STAGING_IMG)-$(ARCH):$(TAG) .
 
 .PHONY: docker-build-all
 docker-build-all: $(addprefix docker-build-,$(ALL_ARCH))
