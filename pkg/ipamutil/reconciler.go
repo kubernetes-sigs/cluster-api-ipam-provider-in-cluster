@@ -3,6 +3,7 @@ package ipamutil
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -10,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
 	clusterutil "sigs.k8s.io/cluster-api/util"
@@ -243,6 +245,23 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 			err = errors.Wrap(err, "failed to create or patch address")
 		}
 		return unwrapResult(res), err
+	}
+
+	// We need to ensure the address is properly watched by controller-runtime client (as it is cached) before moving
+	// to the next reconciliation request.
+	// This is required, otherwise if the next "EnsureAddress" is called too fast, or the controller-runtime cached client informer
+	// is too slow, we may end up not seeing that the IP Address is being used and can provide duplicated IPs.
+	err = wait.PollUntilContextTimeout(ctx, 5*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
+		key := client.ObjectKeyFromObject(&address)
+		if err := r.Client.Get(ctx, key, &ipamv1.IPAddress{}); err != nil {
+			return false, client.IgnoreNotFound(err)
+		}
+		return true, nil
+	})
+
+	if err != nil {
+		log.Error(err, "failed waiting for IPAddress to be visible in the cache after create", "namespace", address.GetNamespace(), "name", address.GetName())
+		return ctrl.Result{}, errors.Wrapf(err, "failed waiting for IPAddress %s/%s to be visible in the cache after create", address.GetNamespace(), address.GetName())
 	}
 
 	log.Info(fmt.Sprintf("IPAddress %s/%s (%s) has been %s", address.Namespace, address.Name, address.Spec.Address, operationResult),
