@@ -713,7 +713,7 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 			t.Helper()
 
 			g := NewWithT(t)
-			g.Expect(testCreate(context.Background(), pool, &webhook)).
+			g.Expect(testCreate(t.Context(), pool, &webhook)).
 				Error().
 				To(MatchError(ContainSubstring(tt.expectedError)))
 		})
@@ -721,7 +721,7 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 			t.Helper()
 
 			g := NewWithT(t)
-			g.Expect(testUpdate(context.Background(), pool, &webhook)).
+			g.Expect(testUpdate(t.Context(), pool, &webhook)).
 				Error().
 				To(MatchError(ContainSubstring(tt.expectedError)))
 		})
@@ -729,7 +729,7 @@ func runInvalidScenarioTests(t *testing.T, tt invalidScenarioTest, pool types.Ge
 			t.Helper()
 
 			g := NewWithT(t)
-			g.Expect(testDelete(context.Background(), pool, &webhook)).
+			g.Expect(testDelete(t.Context(), pool, &webhook)).
 				Error().
 				To(Succeed())
 		})

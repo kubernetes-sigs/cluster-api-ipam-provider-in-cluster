@@ -16,7 +16,7 @@
 ARG ARCH
 
 # Build the manager binary
-FROM golang:1.23 AS builder
+FROM golang:1.24 AS builder
 
 # builder ARGs. No inheritance from global ARGs, so we need to redeclare them.
 ARG ARCH
