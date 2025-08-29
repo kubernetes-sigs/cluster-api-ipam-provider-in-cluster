@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"

@@ -26,9 +26,8 @@ import (
 	"strings"
 
 	"go4.org/netipx"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
@@ -53,7 +52,7 @@ func AddressesOutOfRangeIPSet(inUseAddresses []ipamv1.IPAddress, poolIPSet *neti
 
 // ListAddressesInUse fetches all IPAddresses belonging to the specified pool.
 // Note: requires `index.ipAddressByCombinedPoolRef` to be set up.
-func ListAddressesInUse(ctx context.Context, c client.Reader, namespace string, poolRef corev1.TypedLocalObjectReference) ([]ipamv1.IPAddress, error) {
+func ListAddressesInUse(ctx context.Context, c client.Reader, namespace string, poolRef ipamv1.IPPoolReference) ([]ipamv1.IPAddress, error) {
 	addresses := &ipamv1.IPAddressList{}
 	err := c.List(ctx, addresses,
 		client.MatchingFields{

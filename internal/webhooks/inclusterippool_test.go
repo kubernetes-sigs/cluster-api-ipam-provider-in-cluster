@@ -21,11 +21,9 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -776,8 +774,8 @@ func createIP(name string, ip string, pool types.GenericInClusterPool) *ipamv1.I
 			Name: name,
 		},
 		Spec: ipamv1.IPAddressSpec{
-			PoolRef: corev1.TypedLocalObjectReference{
-				APIGroup: ptr.To(pool.GetObjectKind().GroupVersionKind().Group),
+			PoolRef: ipamv1.IPPoolReference{
+				APIGroup: pool.GetObjectKind().GroupVersionKind().Group,
 				Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 				Name:     pool.GetName(),
 			},

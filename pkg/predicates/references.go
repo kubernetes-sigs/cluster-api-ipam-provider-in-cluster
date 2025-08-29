@@ -19,7 +19,7 @@ package predicates
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -32,7 +32,7 @@ func processIfClaimReferencesPoolKind(gk metav1.GroupKind, obj client.Object) bo
 		return false
 	}
 
-	if claim.Spec.PoolRef.Kind != gk.Kind || claim.Spec.PoolRef.APIGroup == nil || *claim.Spec.PoolRef.APIGroup != gk.Group {
+	if claim.Spec.PoolRef.Kind != gk.Kind || claim.Spec.PoolRef.APIGroup != gk.Group {
 		return false
 	}
 
@@ -64,7 +64,7 @@ func processIfAddressReferencesPoolKind(gk metav1.GroupKind, obj client.Object) 
 		return false
 	}
 
-	if addr.Spec.PoolRef.Kind != gk.Kind || addr.Spec.PoolRef.APIGroup == nil || *addr.Spec.PoolRef.APIGroup != gk.Group {
+	if addr.Spec.PoolRef.Kind != gk.Kind || addr.Spec.PoolRef.APIGroup != gk.Group {
 		return false
 	}
 
