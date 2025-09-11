@@ -20,46 +20,44 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
 func TestClaimReferencesPoolKind(t *testing.T) {
 	tests := []struct {
 		name   string
-		ref    corev1.TypedLocalObjectReference
+		ref    ipamv1.IPPoolReference
 		result bool
 	}{
 		{
 			name: "true for valid reference",
-			ref: corev1.TypedLocalObjectReference{
-				APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
+			ref: ipamv1.IPPoolReference{
+				APIGroup: "ipam.cluster.x-k8s.io",
 				Kind:     "InClusterIPPool",
 			},
 			result: true,
 		},
 		{
 			name: "false when kind does not match",
-			ref: corev1.TypedLocalObjectReference{
-				APIGroup: ptr.To("ipam.cluster.x-k8s.io"),
+			ref: ipamv1.IPPoolReference{
+				APIGroup: "ipam.cluster.x-k8s.io",
 				Kind:     "OutOfClusterIPPool",
 			},
 			result: false,
 		},
 		{
 			name: "false when no group is set",
-			ref: corev1.TypedLocalObjectReference{
+			ref: ipamv1.IPPoolReference{
 				Kind: "InClusterIPPool",
 			},
 			result: false,
 		},
 		{
 			name: "false when group does not match",
-			ref: corev1.TypedLocalObjectReference{
-				APIGroup: ptr.To("cluster.x-k8s.io"),
+			ref: ipamv1.IPPoolReference{
+				APIGroup: "cluster.x-k8s.io",
 				Kind:     "InClusterIPPool",
 			},
 			result: false,

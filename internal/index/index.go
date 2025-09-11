@@ -21,8 +21,7 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -69,6 +68,6 @@ func ipAddressClaimByCombinedPoolRef(o client.Object) []string {
 }
 
 // IPPoolRefValue turns a corev1.TypedLocalObjectReference to an indexable value.
-func IPPoolRefValue(ref corev1.TypedLocalObjectReference) string {
+func IPPoolRefValue(ref ipamv1.IPPoolReference) string {
 	return fmt.Sprintf("%s%s", ref.Kind, ref.Name)
 }

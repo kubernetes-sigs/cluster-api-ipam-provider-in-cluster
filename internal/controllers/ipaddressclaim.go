@@ -22,10 +22,10 @@ import (
 	"slices"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -117,10 +117,10 @@ func (i *InClusterProviderAdapter) inClusterIPPoolToIPClaims(kind string) func(c
 		claims := &ipamv1.IPAddressClaimList{}
 		err := i.Client.List(ctx, claims,
 			client.MatchingFields{
-				"index.poolRef": index.IPPoolRefValue(corev1.TypedLocalObjectReference{
+				"index.poolRef": index.IPPoolRefValue(ipamv1.IPPoolReference{
 					Name:     pool.GetName(),
 					Kind:     kind,
-					APIGroup: &v1alpha2.GroupVersion.Group,
+					APIGroup: v1alpha2.GroupVersion.Group,
 				}),
 			},
 			client.InNamespace(pool.GetNamespace()),
@@ -218,9 +218,8 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 
 		address.Spec.Address = freeIP.String()
 		address.Spec.Gateway = poolSpec.Gateway
-		address.Spec.Prefix = poolSpec.Prefix
+		address.Spec.Prefix = ptr.To(int32(poolSpec.Prefix)) //nolint:gosec
 	}
-
 	return nil, nil
 }
 

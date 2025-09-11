@@ -22,11 +22,10 @@ import (
 	"net/netip"
 
 	"go4.org/netipx"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -106,8 +105,8 @@ func (webhook *InClusterIPPool) ValidateUpdate(ctx context.Context, oldObj, newO
 		return nil, err
 	}
 
-	oldPoolRef := corev1.TypedLocalObjectReference{
-		APIGroup: ptr.To(v1alpha2.GroupVersion.Group),
+	oldPoolRef := ipamv1.IPPoolReference{
+		APIGroup: v1alpha2.GroupVersion.Group,
 		Kind:     oldPool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     oldPool.GetName(),
 	}
@@ -155,8 +154,8 @@ func (webhook *InClusterIPPool) ValidateDelete(ctx context.Context, obj runtime.
 		return nil, nil
 	}
 
-	poolTypeRef := corev1.TypedLocalObjectReference{
-		APIGroup: ptr.To(pool.GetObjectKind().GroupVersionKind().Group),
+	poolTypeRef := ipamv1.IPPoolReference{
+		APIGroup: pool.GetObjectKind().GroupVersionKind().Group,
 		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     pool.GetName(),
 	}
@@ -208,9 +207,7 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 		gateway, err := netip.ParseAddr(newPool.PoolSpec().Gateway)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.PoolSpec().Gateway, err.Error()))
-		}
-
-		if gateway.Is6() && hasIPv4Addr || gateway.Is4() && hasIPv6Addr {
+		} else if gateway.Is6() && hasIPv4Addr || gateway.Is4() && hasIPv6Addr {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gateway"), newPool.PoolSpec().Gateway, "provided gateway and addresses are of mixed IP families"))
 		}
 	}

@@ -21,13 +21,11 @@ import (
 	"net/netip"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/utils/ptr"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,8 +68,7 @@ func (r *InClusterIPPoolReconciler) ipAddressToInClusterIPPool(_ context.Context
 		return nil
 	}
 
-	if ipAddress.Spec.PoolRef.APIGroup != nil &&
-		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
+	if ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
 		ipAddress.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
@@ -106,8 +103,7 @@ func (r *GlobalInClusterIPPoolReconciler) ipAddressToGlobalInClusterIPPool(_ con
 		return nil
 	}
 
-	if ipAddress.Spec.PoolRef.APIGroup != nil &&
-		*ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
+	if ipAddress.Spec.PoolRef.APIGroup == v1alpha2.GroupVersion.Group &&
 		ipAddress.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
@@ -174,8 +170,8 @@ func genericReconcile(ctx context.Context, c client.Client, pool pooltypes.Gener
 		}
 	}()
 
-	poolTypeRef := corev1.TypedLocalObjectReference{
-		APIGroup: ptr.To(v1alpha2.GroupVersion.Group),
+	poolTypeRef := ipamv1.IPPoolReference{
+		APIGroup: v1alpha2.GroupVersion.Group,
 		Kind:     pool.GetObjectKind().GroupVersionKind().Kind,
 		Name:     pool.GetName(),
 	}

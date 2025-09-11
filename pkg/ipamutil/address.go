@@ -19,11 +19,10 @@ package ipamutil
 
 import (
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
-	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -38,11 +37,11 @@ func NewIPAddress(claim *ipamv1.IPAddressClaim, pool client.Object) ipamv1.IPAdd
 			Namespace: claim.Namespace,
 		},
 		Spec: ipamv1.IPAddressSpec{
-			ClaimRef: corev1.LocalObjectReference{
+			ClaimRef: ipamv1.IPAddressClaimReference{
 				Name: claim.Name,
 			},
-			PoolRef: corev1.TypedLocalObjectReference{
-				APIGroup: &poolGVK.Group,
+			PoolRef: ipamv1.IPPoolReference{
+				APIGroup: poolGVK.Group,
 				Kind:     poolGVK.Kind,
 				Name:     pool.GetName(),
 			},
