@@ -1,8 +1,8 @@
 # Cluster API IPAM Provider In Cluster
 
-This is an [IPAM provider](https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20220125-ipam-integration.md#ipam-provider) for [Cluster API](https://github.com/kubernetes-sigs/cluster-api) that manages pools of IP addresses using Kubernetes resources. It serves as a reference implementation for IPAM providers, but can also be used as a simple replacement for DHCP.
+This is an [IPAM provider](https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20220125-ipam-integration.md#ipam-provider) for [Cluster API](https://github.com/kubernetes-sigs/cluster-api) that manages pools of IP addresses using Kubernetes resources. It serves as a reference implementation for IPAM providers but can also be used as a simple replacement for DHCP.
 
-IPAM providers allow to control how IP addresses are assigned to Cluster API Machines. It is usually only useful for non-cloud deployments. The infrastructure provider in use must support IPAM providers in order to use this provider.
+IPAM providers allow control over how IP addresses are assigned to Cluster API Machines. It is usually only useful for non-cloud deployments. The infrastructure provider in use must support IPAM providers to use this provider.
 
 ## Features
 
