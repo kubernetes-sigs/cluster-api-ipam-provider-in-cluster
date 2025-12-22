@@ -22,6 +22,7 @@ import (
 	"os"
 
 	//+kubebuilder:scaffold:imports
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,10 +31,10 @@ import (
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
+	"sigs.k8s.io/cluster-api/util/flags"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha1"
@@ -61,17 +62,22 @@ func init() {
 
 func main() {
 	var (
-		metricsAddr          string
 		enableLeaderElection bool
 		probeAddr            string
 		watchNamespace       string
 		watchFilter          string
-		webhookPort          int
-		webhookCertDir       string
-		webhookCertName      string
-		webhookKeyName       string
+
+		managerOptions = flags.ManagerOptions{}
+
+		webhookPort     int
+		webhookCertDir  string
+		webhookCertName string
+		webhookKeyName  string
 	)
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	// CAPI operator assumes some flags are present so we need to comply. Without this the operator crashes
+	// https://github.com/kubernetes-sigs/cluster-api-operator/pull/871
+	flags.AddManagerOptions(pflag.CommandLine, &managerOptions)
+
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
@@ -83,7 +89,16 @@ func main() {
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/", "Webhook cert dir.")
 	flag.StringVar(&webhookCertName, "webhook-cert-name", "tls.crt", "Webhook cert name.")
 	flag.StringVar(&webhookKeyName, "webhook-key-name", "tls.key", "Webhook key name.")
-	flag.Parse()
+
+	goFlagSet := flag.CommandLine
+	pflag.CommandLine.AddGoFlagSet(goFlagSet)
+	pflag.Parse()
+
+	tlsOpts, metricsOpts, err := flags.GetManagerOptions(managerOptions)
+	if err != nil {
+		setupLog.Error(err, "unable to get manager options")
+		os.Exit(1)
+	}
 
 	// klog.Background will automatically use the right logger.
 	ctrl.SetLogger(klog.Background())
@@ -91,9 +106,7 @@ func main() {
 	ctx := ctrl.SetupSignalHandler()
 
 	opts := ctrl.Options{
-		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
-		},
+		Metrics:                *metricsOpts,
 		Scheme:                 scheme,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
@@ -104,6 +117,7 @@ func main() {
 				CertDir:  webhookCertDir,
 				CertName: webhookCertName,
 				KeyName:  webhookKeyName,
+				TLSOpts:  tlsOpts,
 			},
 		),
 	}
