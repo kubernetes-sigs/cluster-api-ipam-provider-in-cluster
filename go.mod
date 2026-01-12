@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/onsi/ginkgo/v2 v2.27.2
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/gomega v1.39.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.9
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
