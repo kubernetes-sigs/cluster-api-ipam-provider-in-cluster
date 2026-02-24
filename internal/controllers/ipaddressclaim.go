@@ -18,10 +18,11 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -168,7 +169,7 @@ func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (client.Object, *
 	if h.claim.Spec.PoolRef.Kind == inClusterIPPoolKind {
 		icippool := &v1alpha2.InClusterIPPool{}
 		if err := h.Get(ctx, types.NamespacedName{Namespace: h.claim.Namespace, Name: h.claim.Spec.PoolRef.Name}, icippool); err != nil {
-			return nil, nil, errors.Wrap(err, "failed to fetch pool")
+			return nil, nil, pkgerrors.Wrap(err, "failed to fetch pool")
 		}
 		h.pool = icippool
 	} else if h.claim.Spec.PoolRef.Kind == globalInClusterIPPoolKind {
@@ -180,7 +181,7 @@ func (h *IPAddressClaimHandler) FetchPool(ctx context.Context) (client.Object, *
 	}
 
 	if h.pool == nil {
-		err := errors.New("pool not found")
+		err := pkgerrors.New("pool not found")
 		log.Error(err, "the referenced pool could not be found")
 		return nil, nil, nil
 	}
@@ -213,6 +214,9 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 
 		freeIP, err := poolutil.FindFreeAddress(poolIPSet, inUseIPSet)
 		if err != nil {
+			if errors.Is(err, poolutil.ErrPoolExhausted) {
+				return nil, &ipamutil.PoolExhaustedError{Err: fmt.Errorf("failed to find free address: %w", err)}
+			}
 			return nil, fmt.Errorf("failed to find free address: %w", err)
 		}
 

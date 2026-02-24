@@ -503,7 +503,7 @@ var _ = Describe("FindFreeAddress", func() {
 
 			It("returns an error indicating no addresses are available", func() {
 				_, err := FindFreeAddress(freeIPSet, existing)
-				Expect(err).To(MatchError(ContainSubstring("no address available")))
+				Expect(err).To(MatchError(ErrPoolExhausted))
 			})
 		})
 	})
@@ -530,7 +530,7 @@ var _ = Describe("FindFreeAddress", func() {
 
 			It("returns an error indicating no addresses are available", func() {
 				_, err := FindFreeAddress(freeIPSet, existing)
-				Expect(err).To(MatchError(ContainSubstring("no address available")))
+				Expect(err).To(MatchError(ErrPoolExhausted))
 			})
 		})
 	})
@@ -567,7 +567,7 @@ var _ = Describe("FindFreeAddress", func() {
 
 			It("returns an error indicating no addresses are available", func() {
 				_, err := FindFreeAddress(freeIPSet, existing)
-				Expect(err).To(MatchError(ContainSubstring("no address available")))
+				Expect(err).To(MatchError(ErrPoolExhausted))
 			})
 		})
 	})
