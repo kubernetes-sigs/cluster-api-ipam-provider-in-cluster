@@ -81,6 +81,9 @@ func AddressByNamespacedName(addresses []ipamv1.IPAddress, namespace, name strin
 	return nil
 }
 
+// ErrPoolExhausted is returned when no free address is available in the pool.
+var ErrPoolExhausted = errors.New("no address available")
+
 // FindFreeAddress returns the next free IP Address in a range based on a set of existing addresses.
 func FindFreeAddress(poolIPSet *netipx.IPSet, inUseIPSet *netipx.IPSet) (netip.Addr, error) {
 	for _, iprange := range poolIPSet.Ranges() {
@@ -95,7 +98,7 @@ func FindFreeAddress(poolIPSet *netipx.IPSet, inUseIPSet *netipx.IPSet) (netip.A
 			ip = ip.Next()
 		}
 	}
-	return netip.Addr{}, errors.New("no address available")
+	return netip.Addr{}, ErrPoolExhausted
 }
 
 // PoolSpecToIPSet converts a pool spec to an IPSet. Reserved addresses will be
