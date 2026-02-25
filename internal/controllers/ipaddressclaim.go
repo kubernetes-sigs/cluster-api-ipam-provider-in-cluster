@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -223,9 +224,38 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 	return nil, nil
 }
 
-// ReleaseAddress releases the ip address.
-func (h *IPAddressClaimHandler) ReleaseAddress(_ context.Context) (*ctrl.Result, error) {
-	// We don't need to do anything here, since the ip address is released when the IPAddress is deleted
+// ReleaseAddress implements the grace period logic for IP address reuse.
+// When a grace period is configured on the pool, this method delays the
+// actual deletion of the IPAddress object by returning a requeue result
+// until the grace period has elapsed since the claim's deletion timestamp.
+func (h *IPAddressClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	// Skip grace period if pool was deleted (e.g. cluster teardown).
+	if h.pool == nil {
+		return nil, nil
+	}
+
+	gracePeriodSeconds := h.pool.PoolSpec().AddressReuseGracePeriodSeconds
+	// A nil or zero value means no grace period; addresses are available for reuse immediately.
+	if gracePeriodSeconds == nil || *gracePeriodSeconds <= 0 {
+		return nil, nil
+	}
+
+	if h.claim.DeletionTimestamp == nil {
+		return nil, nil
+	}
+
+	gracePeriod := time.Duration(*gracePeriodSeconds) * time.Second
+	elapsed := time.Since(h.claim.DeletionTimestamp.Time)
+	remaining := gracePeriod - elapsed
+	if remaining > 0 {
+		log.Info("Address reuse grace period active, delaying IP address release",
+			"remaining", remaining.Round(time.Second).String(),
+			"gracePeriodSeconds", *gracePeriodSeconds)
+		return &ctrl.Result{RequeueAfter: remaining}, nil
+	}
+
 	return nil, nil
 }
 

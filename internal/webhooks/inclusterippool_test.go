@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -335,6 +336,27 @@ func TestInClusterIPPoolDefaulting(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "addresses with gateway, prefix, and grace period",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.25",
+					"10.0.0.26",
+				},
+				Gateway:                        "10.0.0.24",
+				Prefix:                         28,
+				AddressReuseGracePeriodSeconds: ptr.To(int32(60)),
+			},
+			expect: v1alpha2.InClusterIPPoolSpec{
+				Addresses: []string{
+					"10.0.0.25",
+					"10.0.0.26",
+				},
+				Gateway:                        "10.0.0.24",
+				Prefix:                         28,
+				AddressReuseGracePeriodSeconds: ptr.To(int32(60)),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -626,6 +648,16 @@ func TestInvalidScenarios(t *testing.T) {
 				},
 			},
 			expectedError: "addresses and excluded addresses are of mixed IP families",
+		},
+		{
+			testcase: "negative addressReuseGracePeriodSeconds should not be allowed",
+			spec: v1alpha2.InClusterIPPoolSpec{
+				Addresses:                      []string{"10.0.0.10-10.0.0.20"},
+				Prefix:                         24,
+				Gateway:                        "10.0.0.1",
+				AddressReuseGracePeriodSeconds: ptr.To(int32(-1)),
+			},
+			expectedError: "addressReuseGracePeriodSeconds must not be negative",
 		},
 	}
 	for _, tt := range tests {

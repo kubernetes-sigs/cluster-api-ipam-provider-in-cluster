@@ -187,6 +187,17 @@ spec:
           spec:
             description: InClusterIPPoolSpec defines the desired state of InClusterIPPool.
             properties:
+              addressReuseGracePeriodSeconds:
+                description: |-
+                  AddressReuseGracePeriodSeconds is the duration in seconds for which an
+                  IP address should be kept reserved after being released, preventing
+                  immediate reuse. This helps avoid IP conflicts during rolling upgrades
+                  where old and new nodes may briefly coexist, and prevents ARP cache
+                  issues on network switches.
+                  If not set or set to 0, addresses are available for reuse immediately.
+                format: int32
+                minimum: 0
+                type: integer
               addresses:
                 description: |-
                   Addresses is a list of IP addresses that can be assigned. This set of

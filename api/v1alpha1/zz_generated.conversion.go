@@ -272,6 +272,7 @@ func autoConvert_v1alpha2_InClusterIPPoolSpec_To_v1alpha1_InClusterIPPoolSpec(in
 	out.Gateway = in.Gateway
 	// WARNING: in.AllocateReservedIPAddresses requires manual conversion: does not exist in peer-type
 	// WARNING: in.ExcludedAddresses requires manual conversion: does not exist in peer-type
+	// WARNING: in.AddressReuseGracePeriodSeconds requires manual conversion: does not exist in peer-type
 	return nil
 }
 

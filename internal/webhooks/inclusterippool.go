@@ -232,6 +232,15 @@ func (webhook *InClusterIPPool) validate(_, newPool types.GenericInClusterPool) 
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "excludedAddresses"), newPool.PoolSpec().ExcludedAddresses, "addresses and excluded addresses are of mixed IP families"))
 	}
 
+	if newPool.PoolSpec().AddressReuseGracePeriodSeconds != nil &&
+		*newPool.PoolSpec().AddressReuseGracePeriodSeconds < 0 {
+		allErrs = append(allErrs, field.Invalid(
+			field.NewPath("spec", "addressReuseGracePeriodSeconds"),
+			*newPool.PoolSpec().AddressReuseGracePeriodSeconds,
+			"addressReuseGracePeriodSeconds must not be negative",
+		))
+	}
+
 	if len(allErrs) == 0 {
 		errs := validateAddressesAreWithinPrefix(newPool.PoolSpec())
 		if len(errs) != 0 {
