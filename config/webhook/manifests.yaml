@@ -33,6 +33,28 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-ipam-cluster-x-k8s-io-v1alpha2-globalinclusterprefixpool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.globalinclusterprefixpool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - globalinclusterprefixpools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-ipam-cluster-x-k8s-io-v1alpha2-inclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
@@ -47,6 +69,28 @@ webhooks:
     - UPDATE
     resources:
     - inclusterippools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-ipam-cluster-x-k8s-io-v1alpha2-inclusterprefixpool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.inclusterprefixpool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - inclusterprefixpools
   sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -84,6 +128,29 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-ipam-cluster-x-k8s-io-v1alpha2-globalinclusterprefixpool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.globalinclusterprefixpool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - globalinclusterprefixpools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-ipam-cluster-x-k8s-io-v1alpha2-inclusterippool
   failurePolicy: Fail
   matchPolicy: Equivalent
@@ -99,4 +166,27 @@ webhooks:
     - DELETE
     resources:
     - inclusterippools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ipam-cluster-x-k8s-io-v1alpha2-inclusterprefixpool
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.inclusterprefixpool.ipam.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - ipam.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - inclusterprefixpools
   sideEffects: None

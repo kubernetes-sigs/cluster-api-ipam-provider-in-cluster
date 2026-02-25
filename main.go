@@ -167,10 +167,28 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalInClusterIPPoolReconciler")
 		os.Exit(1)
 	}
+	if err = (&controllers.InClusterPrefixPoolReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "InClusterPrefixPoolReconciler")
+		os.Exit(1)
+	}
+	if err = (&controllers.GlobalInClusterPrefixPoolReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "GlobalInClusterPrefixPoolReconciler")
+		os.Exit(1)
+	}
 
 	if webhookPort != 0 {
 		if err := (&webhooks.InClusterIPPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "InClusterIPPool")
+			os.Exit(1)
+		}
+		if err := (&webhooks.InClusterPrefixPool{Client: mgr.GetClient()}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "InClusterPrefixPool")
 			os.Exit(1)
 		}
 	}

@@ -23,6 +23,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go4.org/netipx"
+	"k8s.io/utils/ptr"
+	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
 )
@@ -610,6 +612,208 @@ var _ = DescribeTable("IPSetCount", func(expectedCount int, addresses ...string)
 	Entry("range larger than int, but less than uint64", math.MaxInt, "fe80::1/65"),
 	Entry("ipv6 CIDR", 4, "fe80::1/126"),
 )
+
+var _ = Describe("Prefix allocation helpers", func() {
+	It("allocates prefixes deterministically with merged aggregates", func() {
+		// fd00::/63 (fd00::/64 + fd00:0:0:1::/64) overlaps with fd00::/62,
+		// and fd00:0:0:8::/62 is disjoint. The IPSet merges overlapping
+		// prefixes into a single fd00::/62 aggregate plus the separate
+		// fd00:0:0:8::/62, giving 8 allocatable /64s total.
+		cfg := &PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/63",
+				"fd00::/62",
+				"fd00:0:0:8::/62",
+			},
+			AllocationPrefixLength: 64,
+		}
+
+		// First allocation comes from the lowest address in the merged aggregate.
+		prefix, err := FindFreePrefix(cfg, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00::/64"))
+
+		// Mark the first four /64s from fd00::/62 as in-use.
+		builder := &netipx.IPSetBuilder{}
+		for _, p := range []string{"fd00::/64", "fd00:0:0:1::/64", "fd00:0:0:2::/64", "fd00:0:0:3::/64"} {
+			parsed, err := netip.ParsePrefix(p)
+			Expect(err).NotTo(HaveOccurred())
+			builder.AddPrefix(parsed)
+		}
+		inUse, err := builder.IPSet()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Next allocation should come from the disjoint fd00:0:0:8::/62 aggregate.
+		prefix, err = FindFreePrefix(cfg, inUse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00:0:0:8::/64"))
+
+		count, err := PrefixCandidateCount(cfg)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(count).To(Equal(8))
+	})
+
+	It("skips existing allocations represented as prefix ranges", func() {
+		inUse, err := AddressesToAllocationPrefixSet([]ipamv1.IPAddress{
+			{
+				Spec: ipamv1.IPAddressSpec{
+					Address: "fd00::",
+					Prefix:  ptr.To(int32(64)),
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		prefix, err := FindFreePrefix(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 64,
+		}, inUse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00:0:0:1::/64"))
+	})
+
+	It("respects excluded prefixes but gateway does not block allocation", func() {
+		prefix, err := FindFreePrefix(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 64,
+			Gateway:                "fd00::1",
+			ExcludedPrefixes: []string{
+				"fd00:0:0:1::/64",
+			},
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+		// Gateway fd00::1 is within fd00::/64, but gateway does NOT block
+		// prefix allocation. Only the excluded prefix fd00:0:0:1::/64 is skipped.
+		Expect(prefix.String()).To(Equal("fd00::/64"))
+	})
+
+	It("returns an error when no prefix is available", func() {
+		inUse, err := AddressesToAllocationPrefixSet([]ipamv1.IPAddress{
+			{
+				Spec: ipamv1.IPAddressSpec{
+					Address: "fd00::",
+					Prefix:  ptr.To(int32(64)),
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = FindFreePrefix(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/64",
+			},
+			AllocationPrefixLength: 64,
+		}, inUse)
+		Expect(err).To(MatchError(ContainSubstring("no prefix available")))
+	})
+
+	It("allocates first prefix when no reserved address concept", func() {
+		prefix, err := FindFreePrefix(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/63",
+			},
+			AllocationPrefixLength: 64,
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00::/64"))
+	})
+
+	It("derives prefixes from IPAddress resources", func() {
+		prefix, err := PrefixFromIPAddress(ipamv1.IPAddress{
+			Spec: ipamv1.IPAddressSpec{
+				Address: "fd00:0:0:5::1234",
+				Prefix:  ptr.To(int32(64)),
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00:0:0:5::/64"))
+	})
+
+	It("counts candidates correctly", func() {
+		count, err := PrefixCandidateCount(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 64,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(count).To(Equal(4))
+	})
+
+	It("supports configurable allocation prefix length", func() {
+		count, err := PrefixCandidateCount(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/48",
+			},
+			AllocationPrefixLength: 56,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(count).To(Equal(256))
+
+		prefix, err := FindFreePrefix(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/48",
+			},
+			AllocationPrefixLength: 56,
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.String()).To(Equal("fd00::/56"))
+	})
+
+	It("returns an error when candidate count input is invalid", func() {
+		_, err := PrefixCandidateCount(&PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 0,
+		})
+		Expect(err).To(HaveOccurred())
+
+		_, err = PrefixCandidateCount(&PrefixPoolConfig{
+			Prefixes: []string{
+				"not-a-cidr",
+			},
+			AllocationPrefixLength: 64,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("allocates correctly with AllocationPrefixLength=64 (minimum boundary)", func() {
+		config := &PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 64,
+		}
+
+		count, err := PrefixCandidateCount(config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(count).To(Equal(4))
+
+		prefix, err := FindFreePrefix(config, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prefix.Bits()).To(Equal(64))
+		Expect(prefix.String()).To(Equal("fd00::/64"))
+	})
+
+	It("checks if a prefix is allocatable", func() {
+		config := &PrefixPoolConfig{
+			Prefixes: []string{
+				"fd00::/62",
+			},
+			AllocationPrefixLength: 64,
+			ExcludedPrefixes:       []string{"fd00:0:0:3::/64"},
+		}
+
+		Expect(PrefixIsAllocatable(netip.MustParsePrefix("fd00:0:0:2::/64"), config)).To(BeTrue())
+		Expect(PrefixIsAllocatable(netip.MustParsePrefix("fd00:0:0:3::/64"), config)).To(BeFalse())
+		Expect(PrefixIsAllocatable(netip.MustParsePrefix("fd00::/63"), config)).To(BeFalse())
+	})
+})
 
 func mustParse(ipString string) netip.Addr {
 	ip, err := netip.ParseAddr(ipString)

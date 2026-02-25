@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package poolutil implements utility functions to manage a pool of IP addresses.
+// Package poolutil implements utility functions to manage pools of IP addresses and network prefixes.
 package poolutil
 
 import (
@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"go4.org/netipx"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,15 +59,10 @@ func ListAddressesInUse(ctx context.Context, c client.Reader, namespace string, 
 		},
 		client.InNamespace(namespace),
 	)
-	addr := []ipamv1.IPAddress{}
-	for _, a := range addresses.Items {
-		gv, _ := schema.ParseGroupVersion(a.APIVersion)
-		if gv.Group != "ipam.cluster.x-k8s.io" {
-			continue
-		}
-		addr = append(addr, a)
+	if err != nil {
+		return nil, err
 	}
-	return addr, err
+	return addresses.Items, nil
 }
 
 // AddressByNamespacedName finds a specific ip address by namespace and name in a slice of addresses.

@@ -67,7 +67,11 @@ func ipAddressClaimByCombinedPoolRef(o client.Object) []string {
 	return []string{IPPoolRefValue(ip.Spec.PoolRef)}
 }
 
-// IPPoolRefValue turns a corev1.TypedLocalObjectReference to an indexable value.
+// IPPoolRefValue turns an IPPoolReference into an indexable cache key.
 func IPPoolRefValue(ref ipamv1.IPPoolReference) string {
-	return fmt.Sprintf("%s%s", ref.Kind, ref.Name)
+	group := ref.APIGroup
+	if group == "" {
+		group = ipamv1.GroupVersion.Group
+	}
+	return fmt.Sprintf("%s/%s/%s", group, ref.Kind, ref.Name)
 }

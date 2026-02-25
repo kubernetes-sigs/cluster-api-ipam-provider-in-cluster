@@ -29,3 +29,10 @@ type GenericInClusterPool interface {
 	PoolSpec() *v1alpha2.InClusterIPPoolSpec
 	PoolStatus() *v1alpha2.InClusterIPPoolStatus
 }
+
+// GenericInClusterPrefixPool is a common interface for InClusterPrefixPool and GlobalInClusterPrefixPool.
+type GenericInClusterPrefixPool interface {
+	client.Object
+	PoolSpec() *v1alpha2.InClusterPrefixPoolSpec
+	PoolStatus() *v1alpha2.InClusterPrefixPoolStatus
+}

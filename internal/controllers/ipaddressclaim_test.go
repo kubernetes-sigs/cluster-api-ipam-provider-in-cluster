@@ -82,11 +82,15 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 			It("should ignore the claim", func() {
 				claim := newClaim("unknown-pool-test", namespace, "UnknownIPPool", poolName)
 				Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
+				Eventually(Get(&claim)).Should(Succeed())
 
 				addresses := ipamv1.IPAddressList{}
 				Consistently(ObjectList(&addresses, client.InNamespace(namespace))).
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Items", HaveLen(0)))
+				Consistently(Object(&claim)).
+					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
+					HaveField("Finalizers", BeEmpty()))
 			})
 		})
 
