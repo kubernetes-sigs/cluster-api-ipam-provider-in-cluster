@@ -7,7 +7,7 @@ IPAM providers allow to control how IP addresses are assigned to Cluster API Mac
 ## Features
 
 - Manages IP Addresses in-cluster using custom Kubernetes resources
-- Address pools can be cluster-wide or namespaced
+- Address and prefix pools can be cluster-wide or namespaced
 - Pools can consist of subnets, arbitrary address ranges and/or individual addresses
 - Both IPv4 and IPv6 are supported
 - Individual addresses, ranges and subnets can be excluded from a pool
@@ -19,7 +19,12 @@ This provider comes with clusterctl support and can be installed using `clusterc
 
 ## Usage
 
-This provider comes with two resources to specify pools from which addresses can be allocated: the `InClusterIPPool` and the `GlobalInClusterIPPool`. As the names suggest, the former is namespaced, the latter is cluster-wide. Otherwise they are identical. The following examples will all use the `InClusterIPPool`, but all examples work with the `GlobalInClusterIPPool` as well.
+This provider comes with two resource pairs:
+
+- Address allocation: `InClusterIPPool` (namespaced) and `GlobalInClusterIPPool` (cluster-wide)
+- Prefix allocation (IPv6 only): `InClusterPrefixPool` (namespaced) and `GlobalInClusterPrefixPool` (cluster-wide)
+
+Within each pair, the resources are functionally identical aside from scope. The address-pool examples below use `InClusterIPPool`, but also apply to `GlobalInClusterIPPool`.
 
 A simple pool that covers an entire /24 IPv4 network could look like this:
 
@@ -77,6 +82,35 @@ spec:
   allocateReservedIPAddresses: true
 ```
 
+### Prefix Pools
+
+For prefix-per-consumer allocation (for example `/64` per claim), use `InClusterPrefixPool` or `GlobalInClusterPrefixPool`.
+
+> [!NOTE]
+> Currently only IPv6 prefixes supported.
+
+```yaml
+apiVersion: ipam.cluster.x-k8s.io/v1alpha2
+kind: InClusterPrefixPool
+metadata:
+  name: inclusterprefixpool-sample
+spec:
+  prefixes:
+    - fd00::/48
+    - fd01::/48
+  allocationPrefixLength: 64
+  excludedPrefixes:
+    - fd00:0:0:1::/64
+  gateway: fd00::1
+```
+
+Key behavior:
+
+- Each allocation is deterministic, first-fit, and non-overlapping
+- `allocationPrefixLength` is immutable after creation, defaults to `64` when omitted
+- `excludedPrefixes` are never allocatable, i.e. new claims skip them and updates are rejected if they would exclude already allocated prefixes
+- `gateway` is informational in this case, it's copied to `IPAddress.spec.gateway` and does not affect reservation
+- Allocated prefix data is stored in `IPAddress.spec.address` (base address) and `IPAddress.spec.prefix` (prefix length)
 
 ### IPv6 Status Limitations
 

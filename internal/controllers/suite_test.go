@@ -117,6 +117,20 @@ var _ = BeforeSuite(func() {
 		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 
+	Expect(
+		(&InClusterPrefixPoolReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(ctx, mgr),
+	).To(Succeed())
+
+	Expect(
+		(&GlobalInClusterPrefixPoolReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(ctx, mgr),
+	).To(Succeed())
+
 	go func() {
 		defer GinkgoRecover()
 		err = mgr.Start(ctx)
