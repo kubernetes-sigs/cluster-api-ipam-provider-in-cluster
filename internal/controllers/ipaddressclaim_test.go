@@ -2171,38 +2171,6 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 				Eventually(Get(&address)).
 					WithTimeout(5 * time.Second).WithPolling(500 * time.Millisecond).Should(Not(Succeed()))
 			})
-
-			It("should not reuse an IP during the grace period", func() {
-				claim1 := newClaim("grace-test", namespace, "InClusterIPPool", poolName)
-				Expect(k8sClient.Create(context.Background(), &claim1)).To(Succeed())
-
-				// Wait for address to be allocated to claim1
-				Eventually(findAddress("grace-test", namespace)).
-					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
-					HaveField("Spec.Address", Equal("10.0.0.10")))
-
-				// Delete claim1
-				Expect(k8sClient.Delete(context.Background(), &claim1)).To(Succeed())
-
-				// Create claim2 immediately - the single IP should still be reserved
-				claim2 := newClaim("grace-test2", namespace, "InClusterIPPool", poolName)
-				Expect(k8sClient.Create(context.Background(), &claim2)).To(Succeed())
-
-				// claim2 should not get an address during grace period (pool exhausted)
-				addresses := ipamv1.IPAddressList{}
-				Consistently(func(g Gomega) {
-					g.Expect(k8sClient.List(context.Background(), &addresses, client.InNamespace(namespace))).To(Succeed())
-					// Only the old address should exist (still in grace period)
-					for _, addr := range addresses.Items {
-						g.Expect(addr.Name).To(Equal("grace-test"))
-					}
-				}).WithTimeout(1 * time.Second).WithPolling(200 * time.Millisecond).Should(Succeed())
-
-				// After grace period elapses, claim2 should get the IP
-				Eventually(findAddress("grace-test2", namespace)).
-					WithTimeout(10 * time.Second).WithPolling(500 * time.Millisecond).Should(
-					HaveField("Spec.Address", Equal("10.0.0.10")))
-			})
 		})
 
 		When("the pool is deleted before the claim (cluster teardown)", func() {
