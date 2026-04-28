@@ -28,7 +28,7 @@ ARCH ?= $(shell go env GOARCH)
 ALL_ARCH ?= amd64 arm64
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.29
+ENVTEST_K8S_VERSION = 1.33
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -243,4 +243,4 @@ verify-boilerplate: ## Verifies all sources have appropriate boilerplate
 CONVERSION_GEN = $(HACK_BIN)/conversion-gen
 .PHONY: conversion-gen
 conversion-gen: ## Download conversion-gen locally if necessary.
-	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@v0.30.1
+	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@v0.33.11

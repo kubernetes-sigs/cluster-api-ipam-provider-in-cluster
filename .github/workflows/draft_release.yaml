@@ -16,11 +16,11 @@ jobs:
       # - name: Set env
       #   run:  echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
       - name: Checkout the Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: go.mod
       # - name: generate release notes
@@ -30,7 +30,7 @@ jobs:
         run: |
           make release
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           draft: true
           files: out/*.*
