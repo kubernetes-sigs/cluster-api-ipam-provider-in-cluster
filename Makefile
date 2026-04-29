@@ -87,6 +87,10 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	$(GOLANGCI_LINT) run ./...
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
@@ -244,3 +248,9 @@ CONVERSION_GEN = $(HACK_BIN)/conversion-gen
 .PHONY: conversion-gen
 conversion-gen: ## Download conversion-gen locally if necessary.
 	env GOBIN=$(HACK_BIN) go install k8s.io/code-generator/cmd/conversion-gen@v0.33.11
+
+GOLANGCI_LINT = $(HACK_BIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v2.11.4
+.PHONY: golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	env GOBIN=$(HACK_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)

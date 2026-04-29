@@ -166,8 +166,8 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 func (h *IPAddressClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// Skip grace period if pool was deleted (e.g. cluster teardown).
-	if h.pool == nil {
+	// Skip grace period if pool was deleted or is being deleted (e.g. cluster teardown).
+	if h.pool == nil || !h.pool.GetDeletionTimestamp().IsZero() {
 		return nil, nil
 	}
 

@@ -2200,14 +2200,19 @@ var _ = Describe("IPAddressClaimReconciler", func() {
 					WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 					HaveField("Spec.Address", Equal("10.0.0.50")))
 
-				// Delete the pool first (simulating cluster teardown)
-				deleteNamespacedPool(poolName, namespace)
+				// Delete the pool first (simulating cluster teardown).
+				// Do not wait for full deletion - the pool won't disappear until the address is gone.
+				Expect(k8sClient.Delete(context.Background(), &pool)).To(Succeed())
 
 				// Now delete the claim - should NOT wait 300s grace period
 				Expect(k8sClient.Delete(context.Background(), &claim)).To(Succeed())
 
 				// Claim and address should be cleaned up quickly despite long grace period
 				Eventually(Get(&claim)).
+					WithTimeout(10 * time.Second).WithPolling(500 * time.Millisecond).Should(Not(Succeed()))
+
+				// Pool should also be gone once there are no more addresses
+				Eventually(Get(&pool)).
 					WithTimeout(10 * time.Second).WithPolling(500 * time.Millisecond).Should(Not(Succeed()))
 			})
 		})

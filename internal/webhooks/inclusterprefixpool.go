@@ -268,9 +268,8 @@ func prefixPoolWarnings(spec *v1alpha2.InClusterPrefixPoolSpec) admission.Warnin
 		return nil
 	}
 
-	warnings := admission.Warnings{
-		warnPrefixLength,
-	}
+	warnings := make(admission.Warnings, 0, 2)
+	warnings = append(warnings, warnPrefixLength)
 	if spec.Gateway == "" {
 		return warnings
 	}
