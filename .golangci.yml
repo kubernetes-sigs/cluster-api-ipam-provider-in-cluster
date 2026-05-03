@@ -232,6 +232,9 @@ linters:
       - linters:
           - staticcheck
         text: 'QF1008: could remove embedded field'
+      - linters:
+          - staticcheck
+        text: 'SA1019: res.Requeue is deprecated: Use `RequeueAfter` instead'
     paths:
       - zz_generated.*\.go$
       - vendored_openapi\.go$
