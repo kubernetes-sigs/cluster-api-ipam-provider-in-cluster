@@ -166,6 +166,10 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 func (h *IPAddressClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	if h.claim.DeletionTimestamp == nil {
+		return nil, nil
+	}
+
 	// Skip grace period if pool was deleted or is being deleted (e.g. cluster teardown).
 	if h.pool == nil || !h.pool.GetDeletionTimestamp().IsZero() {
 		return nil, nil
@@ -174,10 +178,6 @@ func (h *IPAddressClaimHandler) ReleaseAddress(ctx context.Context) (*ctrl.Resul
 	gracePeriodSeconds := h.pool.PoolSpec().AddressReuseGracePeriodSeconds
 	// A nil or zero value means no grace period; addresses are available for reuse immediately.
 	if gracePeriodSeconds == nil || *gracePeriodSeconds <= 0 {
-		return nil, nil
-	}
-
-	if h.claim.DeletionTimestamp == nil {
 		return nil, nil
 	}
 

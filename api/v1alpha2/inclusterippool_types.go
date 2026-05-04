@@ -55,7 +55,7 @@ type InClusterIPPoolSpec struct {
 	// issues on network switches.
 	// If not set or set to 0, addresses are available for reuse immediately.
 	// During the grace period the IPAddress and claim deletions are held, the downstream consumers using foreground cascading
-	// deletion through the claim will see deletion of upstream resources delayed by up to AddressReuseGracePeriodSeconds..
+	// deletion through the claim will see deletion of upstream resources delayed by up to AddressReuseGracePeriodSeconds.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	AddressReuseGracePeriodSeconds *int32 `json:"addressReuseGracePeriodSeconds,omitempty"`
