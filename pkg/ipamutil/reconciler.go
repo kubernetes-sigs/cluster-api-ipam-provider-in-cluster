@@ -278,8 +278,12 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 }
 
 func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim, handler ClaimHandler) (ctrl.Result, error) {
-	if res, err := handler.ReleaseAddress(ctx); err != nil {
+	res, err := handler.ReleaseAddress(ctx)
+	if err != nil {
 		return unwrapResult(res), fmt.Errorf("release address: %w", err)
+	}
+	if res != nil && (res.Requeue || res.RequeueAfter > 0) {
+		return *res, nil
 	}
 
 	address := &ipamv1.IPAddress{}

@@ -47,6 +47,18 @@ type InClusterIPPoolSpec struct {
 	// the set of assignable IP addresses.
 	// +optional
 	ExcludedAddresses []string `json:"excludedAddresses,omitempty"`
+
+	// AddressReuseGracePeriodSeconds is the duration in seconds for which an
+	// IP address should be kept reserved after being released, preventing
+	// immediate reuse. This helps avoid IP conflicts during rolling upgrades
+	// where old and new nodes may briefly coexist, and prevents ARP cache
+	// issues on network switches.
+	// If not set or set to 0, addresses are available for reuse immediately.
+	// During the grace period the IPAddress and claim deletions are held, the downstream consumers using foreground cascading
+	// deletion through the claim will see deletion of upstream resources delayed by up to AddressReuseGracePeriodSeconds.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	AddressReuseGracePeriodSeconds *int32 `json:"addressReuseGracePeriodSeconds,omitempty"`
 }
 
 // InClusterIPPoolStatus defines the observed state of InClusterIPPool.

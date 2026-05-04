@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	"sigs.k8s.io/cluster-api-ipam-provider-in-cluster/api/v1alpha2"
@@ -191,7 +192,7 @@ var _ = Describe("IP Pool Reconciler", func() {
 			Expect(k8sClient.Create(context.Background(), &claim)).To(Succeed())
 
 			addresses := ipamv1.IPAddressList{}
-			Eventually(ObjectList(&addresses)).
+			Eventually(ObjectList(&addresses, client.InNamespace(namespace))).
 				WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(
 				HaveField("Items", HaveLen(1)))
 
