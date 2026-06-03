@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/onsi/ginkgo/v2 v2.28.0
-	github.com/onsi/gomega v1.39.1
+	github.com/onsi/gomega v1.41.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.10
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
