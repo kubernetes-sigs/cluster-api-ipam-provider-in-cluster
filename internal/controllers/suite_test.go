@@ -97,9 +97,10 @@ var _ = BeforeSuite(func() {
 
 	Expect(
 		(&ipamutil.ClaimReconciler{
-			Client:  mgr.GetClient(),
-			Scheme:  mgr.GetScheme(),
-			Adapter: &InClusterProviderAdapter{Client: mgr.GetClient()},
+			Client:                          mgr.GetClient(),
+			Scheme:                          mgr.GetScheme(),
+			Adapter:                         &InClusterProviderAdapter{Client: mgr.GetClient()},
+			SetIPAddressClaimReadyCondition: true,
 		}).SetupWithManager(ctx, mgr),
 	).To(Succeed())
 

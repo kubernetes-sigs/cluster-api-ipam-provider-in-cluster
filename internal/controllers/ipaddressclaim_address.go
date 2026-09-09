@@ -149,6 +149,9 @@ func (h *IPAddressClaimHandler) EnsureAddress(ctx context.Context, address *ipam
 
 		freeIP, err := poolutil.FindFreeAddress(poolIPSet, inUseIPSet)
 		if err != nil {
+			if errors.Is(err, poolutil.ErrPoolExhausted) {
+				return nil, &ipamutil.PoolExhaustedError{Err: fmt.Errorf("failed to find free address: %w", err)}
+			}
 			return nil, fmt.Errorf("failed to find free address: %w", err)
 		}
 
