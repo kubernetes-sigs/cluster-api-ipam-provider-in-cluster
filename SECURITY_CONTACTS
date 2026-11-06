@@ -10,6 +10,11 @@
 # DO NOT REPORT SECURITY VULNERABILITIES DIRECTLY TO THESE NAMES, FOLLOW THE
 # INSTRUCTIONS AT https://kubernetes.io/security/
 
+# Project Maintainers
 schrej
-CecileRobertMichon
+mcbenjemaa
+
+# SIG Cluster Lifecycle Leads
 fabriziopandini
+justinsb
+neolit123
