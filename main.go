@@ -153,6 +153,7 @@ func main() {
 			Client:           mgr.GetClient(),
 			WatchFilterValue: watchFilter,
 		},
+		SetIPAddressClaimReadyCondition: true,
 	}).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IPAddressClaim")
 		os.Exit(1)

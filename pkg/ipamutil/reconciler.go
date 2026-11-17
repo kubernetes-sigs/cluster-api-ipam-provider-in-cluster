@@ -2,11 +2,13 @@ package ipamutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -15,6 +17,7 @@ import (
 	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
 	clusterutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,6 +36,9 @@ const (
 
 	// ProtectAddressFinalizer is used to prevent deletion of an IPAddress object while its claim is not deleted.
 	ProtectAddressFinalizer = "ipam.cluster.x-k8s.io/ProtectAddress"
+
+	// IPAddressClaimReadyAddressAllocatedReason is the reason used when an IP address has been successfully allocated.
+	IPAddressClaimReadyAddressAllocatedReason = "AddressAllocated"
 )
 
 // ClaimReconciler reconciles a IPAddressClaim object using a ProviderAdapter.
@@ -55,6 +61,12 @@ type ClaimReconciler struct {
 	WatchFilterValue string
 
 	Adapter ProviderAdapter
+
+	// SetIPAddressClaimReadyCondition controls whether the reconciler sets the Ready
+	// condition (v1beta2) on the reconciled IPAddressClaim. It defaults to false so
+	// that ProviderAdapter/ClaimHandler implementations that already manage their own
+	// conditions on the claim are not affected.
+	SetIPAddressClaimReadyCondition bool
 }
 
 // ProviderAdapter is an interface that must be implemented by the IPAM provider.
@@ -172,7 +184,11 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	}
 
 	defer func() {
-		if err := patchHelper.Patch(ctx, claim); err != nil {
+		patchOpts := []patch.Option{}
+		if r.SetIPAddressClaimReadyCondition {
+			patchOpts = append(patchOpts, patch.WithOwnedConditions{Conditions: []string{ipamv1.IPAddressClaimReadyCondition}})
+		}
+		if err := patchHelper.Patch(ctx, claim, patchOpts...); err != nil {
 			reterr = kerrors.NewAggregate([]error{reterr, err})
 		}
 	}()
@@ -193,15 +209,16 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 			if !claim.ObjectMeta.DeletionTimestamp.IsZero() {
 				return r.reconcileDelete(ctx, claim, handler)
 			}
+			r.setReadyCondition(claim, metav1.ConditionFalse, ipamv1.IPAddressClaimReadyPoolNotReadyReason, err.Error())
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch pool")
+		return ctrl.Result{}, pkgerrors.Wrap(err, "failed to fetch pool")
 	}
 
 	if pool == nil {
 		err = fmt.Errorf("pool is nil")
 		log.Error(err, "pool error")
-		return ctrl.Result{}, errors.Wrap(err, "reconciliation failed")
+		return ctrl.Result{}, pkgerrors.Wrap(err, "reconciliation failed")
 	}
 
 	if annotations.HasPaused(pool) {
@@ -224,7 +241,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 		}
 
 		if err = ensureIPAddressOwnerReferences(r.Scheme, &address, claim, pool); err != nil {
-			return errors.Wrap(err, "failed to ensure owner references on address")
+			return pkgerrors.Wrap(err, "failed to ensure owner references on address")
 		}
 
 		if val, ok := claim.Labels[clusterv1.ClusterNameLabel]; ok {
@@ -241,7 +258,13 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	if res != nil || err != nil {
 		if err != nil {
-			err = errors.Wrap(err, "failed to create or patch address")
+			var poolExhausted *PoolExhaustedError
+			if errors.As(err, &poolExhausted) {
+				r.setReadyCondition(claim, metav1.ConditionFalse, ipamv1.IPAddressClaimReadyPoolExhaustedReason, err.Error())
+			} else {
+				r.setReadyCondition(claim, metav1.ConditionFalse, ipamv1.IPAddressClaimReadyAllocationFailedReason, err.Error())
+			}
+			err = pkgerrors.Wrap(err, "failed to create or patch address")
 		}
 		return unwrapResult(res), err
 	}
@@ -260,7 +283,7 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	if err != nil {
 		log.Error(err, "failed waiting for IPAddress to be visible in the cache after create", "namespace", address.GetNamespace(), "name", address.GetName())
-		return ctrl.Result{}, errors.Wrapf(err, "failed waiting for IPAddress %s/%s to be visible in the cache after create", address.GetNamespace(), address.GetName())
+		return ctrl.Result{}, pkgerrors.Wrapf(err, "failed waiting for IPAddress %s/%s to be visible in the cache after create", address.GetNamespace(), address.GetName())
 	}
 
 	log.Info(fmt.Sprintf("IPAddress %s/%s (%s) has been %s", address.Namespace, address.Name, address.Spec.Address, operationResult),
@@ -274,7 +297,22 @@ func (r *ClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 
 	claim.Status.AddressRef = ipamv1.IPAddressReference{Name: address.Name}
 
+	r.setReadyCondition(claim, metav1.ConditionTrue, IPAddressClaimReadyAddressAllocatedReason, "")
+
 	return ctrl.Result{}, nil
+}
+
+// setReadyCondition sets the Ready condition on the claim if SetIPAddressClaimReadyCondition is enabled.
+func (r *ClaimReconciler) setReadyCondition(claim *ipamv1.IPAddressClaim, status metav1.ConditionStatus, reason, message string) {
+	if !r.SetIPAddressClaimReadyCondition {
+		return
+	}
+	conditions.Set(claim, metav1.Condition{
+		Type:    ipamv1.IPAddressClaimReadyCondition,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
 }
 
 func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPAddressClaim, handler ClaimHandler) (ctrl.Result, error) {
@@ -292,7 +330,7 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 		Name:      claim.Name,
 	}
 	if err := r.Client.Get(ctx, namespacedName, address); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, errors.Wrap(err, "failed to fetch address")
+		return ctrl.Result{}, pkgerrors.Wrap(err, "failed to fetch address")
 	}
 
 	if address.Name != "" {
@@ -300,7 +338,7 @@ func (r *ClaimReconciler) reconcileDelete(ctx context.Context, claim *ipamv1.IPA
 		p := client.MergeFrom(address.DeepCopy())
 		if controllerutil.RemoveFinalizer(address, ProtectAddressFinalizer) {
 			if err = r.Client.Patch(ctx, address, p); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, errors.Wrap(err, "failed to remove address finalizer")
+				return ctrl.Result{}, pkgerrors.Wrap(err, "failed to remove address finalizer")
 			}
 		}
 
